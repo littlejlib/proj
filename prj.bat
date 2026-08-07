@@ -2,7 +2,7 @@
 chcp 65001 > nul
 REM Get the directory where this batch file is located
 rem set SCRIPT_DIR=%~dp0
-set SCRIPT_DIR=%usrp%/code\xyz-jphil\xyz-jphil-ai-proj_build_dev_misc_tools\
+set SCRIPT_DIR=%usrp%/code\littlejlib\proj\
 set DEBUG=0
 set AOT=1 
 REM Create temp batch file path and set as environment variable for Java to use
@@ -12,17 +12,17 @@ REM JVM flags to suppress warnings
 REM --sun-misc-unsafe-memory-access=allow suppresses Unsafe deprecation warnings from Truffle/GraalVM (Java 24+)
 set JVM_FLAGS=--enable-native-access=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.nio.channels.spi=ALL-UNNAMED --add-exports jdk.unsupported/sun.misc=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow
 
-rem set AOT_CACHE=%USERPROFILE%\xyz-jphil\ai\proj-build_dev_misc_tools\AOTCache.aot
-set AOT_CACHE=%usrp%\code\xyz-jphil\xyz-jphil-ai-proj_build_dev_misc_tools\target\AOTCache.aot 
+rem set AOT_CACHE=%USERPROFILE%\littlejlib\proj\AOTCache.aot
+set AOT_CACHE=%usrp%\code\littlejlib\proj\target\AOTCache.aot
 REM Check which JAR location exists and run it with AOT support (JDK 25 JEP 514/515)
-if exist "%SCRIPT_DIR%target\xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar" (
-    set JAR_FILE=%SCRIPT_DIR%target\xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar
-) else if exist "%SCRIPT_DIR%xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar" (
-    set JAR_FILE=%SCRIPT_DIR%xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar
+if exist "%SCRIPT_DIR%target\littlejlib-proj-1.0.jar" (
+    set JAR_FILE=%SCRIPT_DIR%target\littlejlib-proj-1.0.jar
+) else if exist "%SCRIPT_DIR%littlejlib-proj-1.0.jar" (
+    set JAR_FILE=%SCRIPT_DIR%littlejlib-proj-1.0.jar
 ) else (
     echo ERROR: JAR file not found in either location:
-    echo   - %SCRIPT_DIR%target\xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar
-    echo   - %SCRIPT_DIR%xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar
+    echo   - %SCRIPT_DIR%target\littlejlib-proj-1.0.jar
+    echo   - %SCRIPT_DIR%littlejlib-proj-1.0.jar
     exit /b 1
 )
 

@@ -29,14 +29,14 @@ for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set da
 set TIMESTAMP=%datetime:~0,8%_%datetime:~8,6%
 
 REM Set release filename
-set RELEASE_NAME=xyz-jphil-ai-proj_build_dev_misc_tools-release-%TIMESTAMP%.zip
+set RELEASE_NAME=littlejlib-proj-release-%TIMESTAMP%.zip
 
 echo Timestamp: %TIMESTAMP%
 echo Release file: %RELEASE_NAME%
 echo.
 
 REM Check if JAR exists, if not build it
-if not exist "target\xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar" (
+if not exist "target\littlejlib-proj-1.0.jar" (
     echo JAR not found. Building project...
     echo.
     call mvn package
@@ -56,7 +56,10 @@ if not exist "target\xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar" (
 
 REM Create the ZIP file
 echo Creating release ZIP...
-powershell -Command "Compress-Archive -Path 'proj.bat','target\xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar' -DestinationPath 'releases\%RELEASE_NAME%' -Force"
+REM projold.bat is the superseded wrapper, shipped only as a fallback. The supported
+REM launcher is proj.exe (a copy of jr.exe) plus proj.jrc; the shell adapter that does
+REM the cd comes from `proj --init clink|cmd|powershell|bash`.
+powershell -Command "Compress-Archive -Path 'projold.bat','target\littlejlib-proj-1.0.jar' -DestinationPath 'releases\%RELEASE_NAME%' -Force"
 
 if errorlevel 1 (
     echo.

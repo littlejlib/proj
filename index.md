@@ -22,14 +22,14 @@ This repository hosts PRP (Project Requirement Prompts) templates for use with A
 You can reference these templates in your `Settings.xml`:
 
 ```xml
-<prpTemplate src="https://xyz-jphil.github.io/xyz-jphil-ai-proj_build_dev_misc_tools/prp-templates/PRPTemplate-v2026-01-29_2045Z-klwXbO.md" />
+<prpTemplate src="https://littlejlib.github.io/proj/prp-templates/PRPTemplate-v2026-01-29_2045Z-klwXbO.md" />
 ```
 
 The tool will automatically download and cache the template locally for offline use.
 
 ## Documentation
 
-See the [README](https://github.com/xyz-jphil/xyz-jphil-ai-proj_build_dev_misc_tools) for full documentation.
+See the [README](https://github.com/littlejlib/proj) for full documentation.
 
 ## About PRP Convention
 
@@ -37,4 +37,4 @@ The PRP (Project Requirement Prompts) convention is based on work by Cole Medin.
 
 ## Repository
 
-Visit the [GitHub repository](https://github.com/xyz-jphil/xyz-jphil-ai-proj_build_dev_misc_tools) for source code and releases.
+Visit the [GitHub repository](https://github.com/littlejlib/proj) for source code and releases.

@@ -30,7 +30,7 @@ I have my own reasons for using PRPs, but to highlight one key benefit: it's bet
 ### Option 1: Download Pre-built Release
 
 1. Download the latest release ZIP from the `releases/` folder
-2. Extract `proj.bat` and `xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar`
+2. Extract `proj.bat` and `littlejlib-proj-1.0.jar`
 3. Place them in a directory of your choice
 4. Run `proj.bat` (Windows)
 
@@ -57,20 +57,24 @@ proj.bat
 
 Or directly with Java:
 ```bash
-java -jar xyz-jphil-ai-proj_build_dev_misc_tools-1.0.jar
+java -jar littlejlib-proj-1.0.jar
 ```
 
 ### First Run
 
 On first run, the tool creates a settings file at:
 ```
-<user-home>/xyz-jphil/ai/proj-build_dev_misc_tools/Settings.xml
+<user-home>/littlejlib/proj/Settings.toml
 ```
 
-Edit this file to configure:
-- Code repositories base path
-- Default text editor
-- NetBeans IDE path
+Edit it by hand, or run `proj settings` for a window that edits the same file. An existing
+`Settings.xml` from an older version is migrated automatically on first run and kept alongside as
+`Settings.xml.migrated`.
+
+Configure:
+- Code base directories, and whether each is primary, mirror or auxiliary
+- Terminal and IDE launchers
+- The command that starts a coding agent on a PRP
 - Organizations with their Maven groupIds
 
 ### Main Features
@@ -85,8 +89,11 @@ Edit this file to configure:
 - Useful for exploring projects outside your configured list
 
 **3. Git Clone Repository**
-- Automatically places cloned repositories in the correct directory structure
-- Format: `<code-repos>/<organization>/<repository-name>`
+- Routes clones by organization: repos from a **configured** organization (your own
+  projects) go into the code repos directory; any **other** organization is treated as
+  external and goes into the GitHub mirror directory (falls back to code repos if the
+  mirror path is not set)
+- Format: `<code-repos | github-mirror>/<organization>/<repository-name>`
 - Creates organization directories as needed
 
 **4. Create New Project**
@@ -105,39 +112,62 @@ Edit this file to configure:
 - Add/edit/remove organizations
 - Configure paths and tools
 
-## Settings.xml Structure
+## Settings.toml Structure
 
-```xml
-<Settings>
-    <CodeReposPath>C:\Users\User\code</CodeReposPath>
-    <NetbeansPath>C:\Program Files\NetBeans\bin\netbeans.exe</NetbeansPath>
-    <DefaultEditor>notepad.exe</DefaultEditor>
+Flat TOML: one setting per line, no sections. Values in `'single quotes'` are **literal** — no
+escape processing at all — which is why a Windows path is written once, as itself. A value that
+itself contains a single quote is wrapped in `'''three'''` instead. Nothing here ever needs a
+doubled backslash.
 
-    <Organizations>
-        <Organization>
-            <Name>xyz-jphil</Name>
-            <GroupId>io.github.xyz-jphil</GroupId>
-        </Organization>
-    </Organizations>
+```toml
+scanDepth = 5
+singleFileEditor = 'C:\user\Apps\VScode\code.exe'
 
-    <PrpTemplate><![CDATA[PRP Number: %index%
+# Directories holding many repositories. Only primary is shown by default and
+# watched for live changes; the others stay indexed and searchable behind a
+# checkbox in the picker. Move a path between lines to retype it.
+codebase.primary   = ['C:\user\code']
+codebase.mirror    = ['C:\user\github-mirror']
+codebase.auxiliary = []
+
+# %PATH% is the directory; %SCRIPT% is a generated script that cds there first.
+# An empty run means that terminal can open a shell but not start a command.
+terminal.Tabby.open = '"C:\user\Apps\tabby\Tabby.exe" open "%PATH%"'
+terminal.Tabby.run  = ''
+defaultTerminal = 'Tabby'
+
+# One "open in" button per line in the picker.
+ide.NetBeans = 'C:\user\Apps\netbeans\bin\netbeans64.exe "--open" "%PATH%"'
+
+# Starting a coding agent on a PRP. The working directory is always the PROJECT
+# ROOT, never the prp folder. %PRP% is relative to it; %PRP_ABS% is absolute.
+agentCommand = 'claude "@%PRP% read this PRP and let us begin"'
+
+prpTemplateSrc = 'https://littlejlib.github.io/proj/prp-templates/PRPTemplate.md'
+
+# Directory name under a code base -> the maven groupId it publishes under.
+org.xyz-jphil = 'io.github.xyz-jphil'
+
+statusTemplate = '''
+PRP Number: %index%
 PRP Name: %name%
-Usage Guide:
-    - This is a Project Requirement Prompt (PRP). This file contains AI prompts that are intended to define certain requirement(s) for this project.
-    - Claude Code (or any other coding AI agents) will be working on implementing this requirement in this project when told by the user. For AI coding agents this file is READ-ONLY and MUST NOT be modified by AI coding agents.
-    - Once this PRP is completed (or temporarily stalled), it is renamed to `%index%-prp-%name%.closed.md`.
-    - The file `%index%-prp.status.md` carries the status update for this prp, which is to be written/updated by the AI coding agents working on this prp.
-]]></PrpTemplate>
-</Settings>
+Status: IN PROGRESS
+'''
 ```
 
 ### Key Configuration Options
 
-- **CodeReposPath**: Base directory where all repositories are stored
-- **NetbeansPath**: Full path to NetBeans executable (optional)
-- **DefaultEditor**: Command to open text files (e.g., `notepad.exe`, `vim`, `code`)
-- **Organizations**: List of GitHub organizations with their Maven groupIds
-- **PrpTemplate**: Template for generating new PRP files (supports %index% and %name% placeholders)
+- **codebase.primary / .mirror / .auxiliary**: directories holding many repositories. All are
+  indexed and searchable; only primary is shown by default and live-watched.
+- **terminal.NAME.open / .run**: how to open a shell somewhere, and how to run a command there.
+  `proj term --which` reports which terminal is used for each — they are not always the same one.
+- **defaultTerminal**: which of them to prefer. Blank means the best one detected.
+- **ide.NAME**: an "open in" button per entry in the picker. Omit them all and the picker offers
+  whatever it detects on the machine.
+- **agentCommand**: what `proj prp agent <n>` runs, from the project root.
+- **singleFileEditor**: editor for PRPs, poms and this file. Blank means whatever is installed.
+- **org.NAME**: maven groupId for projects under that directory name.
+- **scanDepth**: how many levels below a code base the scanner descends.
 
 ## Directory Structure
 

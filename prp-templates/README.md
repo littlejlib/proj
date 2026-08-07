@@ -24,7 +24,7 @@ Current default template that includes:
 The tool automatically uses templates configured in your `Settings.xml`:
 
 ```xml
-<prpTemplate src="https://xyz-jphil.github.io/xyz-jphil-ai-proj_build_dev_misc_tools/prp-templates/PRPTemplate-v2026-01-29_2045Z-klwXbO.md" />
+<prpTemplate src="https://littlejlib.github.io/proj/prp-templates/PRPTemplate-v2026-01-29_2045Z-klwXbO.md" />
 ```
 
 ### Custom Templates
