@@ -91,11 +91,17 @@ public class ProjectPickerDialog {
 
         // Fit the screen actually in front of the user. A fixed 1400x760 overflowed a 1536x864
         // display and took the maven-only checkbox and the whole shortcut line off-screen with it.
+        // These are the RESTORED bounds - what you get after un-maximising - because the window
+        // opens maximised: this table is a dozen columns wide and every one of them is worth
+        // reading. Restore is deliberately left available rather than the window being locked.
         var screen = Screen.getPrimary().getVisualBounds();
         stage.setWidth(Math.min(1500, screen.getWidth() - 60));
         stage.setHeight(Math.min(820, screen.getHeight() - 60));
         stage.setX(screen.getMinX() + (screen.getWidth() - stage.getWidth()) / 2);
         stage.setY(screen.getMinY() + (screen.getHeight() - stage.getHeight()) / 2);
+        // Set once, at build. The daemon shows this same window many times, and forcing it on
+        // every reopen would undo an un-maximise the user had made deliberately.
+        stage.setMaximized(true);
 
         searchField = new TextField();
         searchField.setPromptText("Filter - space separated terms, matches path and maven coordinates");
@@ -538,6 +544,8 @@ public class ProjectPickerDialog {
             // change to either has to be reflected rather than waiting for the next daemon restart.
             littlejlib.proj.ide.IdeDetector.forget();
             littlejlib.proj.terminal.TerminalDetector.forget();
+            // SettingsDialog has already marked this window stale, so "reopen" is now true advice
+            // rather than the suggestion it used to be - the next open rebuilds from the new file.
             Toast.show("Settings saved - reopen the picker for column changes to take effect");
         }
     }
@@ -712,10 +720,13 @@ public class ProjectPickerDialog {
         searchField.requestFocus();
     }
 
-    /** Released only when the daemon exits; a hidden window keeps its watcher and its cache warm. */
+    /** Released when the daemon exits, or when a settings change makes this window out of date. */
     void dispose() {
         central.shutdown();
         if (watcher != null) watcher.stop();
+        // Only from the FX thread: the other caller is the daemon's shutdown hook, on which
+        // touching a Stage throws and would mask whatever it was actually shutting down for.
+        if (stage != null && Platform.isFxApplicationThread()) stage.close();
     }
 
     public static PickerResult show(List<Path> browsePaths, Settings settings) {

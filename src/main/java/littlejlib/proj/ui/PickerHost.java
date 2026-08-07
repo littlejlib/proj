@@ -19,6 +19,7 @@ public final class PickerHost {
     private PickerHost() { }
 
     static volatile ProjectPickerDialog instance;
+    static volatile boolean stale;
 
     /** Builds the window without showing it. Called at daemon startup so the first open is cheap too. */
     public static void prewarm(List<Path> browsePaths, Settings settings) {
@@ -31,13 +32,29 @@ public final class PickerHost {
         });
     }
 
+    /**
+     * "Rebuild before showing this again."
+     * <p>
+     * Columns, IDE buttons and terminals are all read from settings when the window is CONSTRUCTED,
+     * and this class exists precisely to construct it once. So a settings change would otherwise not
+     * be visible until the daemon was restarted - "reopen the picker" being advice the user follows
+     * and which then does nothing. Deferred rather than acted on immediately because the settings
+     * dialog is usually opened FROM the picker, and disposing a window while it is on screen is not
+     * a thing to do; the next show() picks this up, when the old window is already hidden.
+     */
+    public static void invalidate() {
+        stale = true;
+    }
+
     public static PickerResult show(List<Path> browsePaths, Settings settings) {
         return JavaFXManager.getInstance().<PickerResult>showDialog((lock, holder) -> {
-            // Settings can change between invocations; a picker built for other roots is discarded.
-            if (instance != null && !instance.covers(browsePaths)) {
+            // Settings can change between invocations; a picker built for other roots, or built
+            // before a settings change, is discarded rather than shown out of date.
+            if (instance != null && (stale || !instance.covers(browsePaths))) {
                 instance.dispose();
                 instance = null;
             }
+            stale = false;
             if (instance == null) instance = new ProjectPickerDialog(browsePaths, settings);
             instance.reopen(lock, holder);
         }, 900_000);

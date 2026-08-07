@@ -13,6 +13,15 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import littlejlib.proj.Settings;
 
+/**
+ * The main menu.
+ * <p>
+ * FUNCTION KEYS, like every other window here. The digits 1-8 were this menu's own scheme and
+ * nothing else's, so the one window a new user meets first taught a convention the rest of the
+ * application does not use. There is no text field here for a letter to fall into, so the letter
+ * shortcuts stay as a second way in; the labels and the footer name the function keys, because
+ * those are the ones that mean the same thing in the picker and the PRP manager.
+ */
 public class MainMenuDialog {
 
     private static final Object lockObject = new Object();
@@ -35,9 +44,12 @@ public class MainMenuDialog {
      */
     public static Action show(Settings settings) {
         System.out.println("[MainMenuDialog] Showing main menu");
+        // Long, because the thing being waited on is a person deciding. Ten seconds was enough
+        // while this only ever ran in a process that was about to exit anyway; served from the
+        // daemon it would report EXIT to the client with the menu still open on screen.
         String result = JavaFXManager.getInstance().showDialog(
             (lock, resultHolder) -> showOnFxThread(settings, lock, resultHolder),
-            10000  // 10 second timeout
+            900_000
         );
         return stringToAction(result);
     }
@@ -86,14 +98,14 @@ public class MainMenuDialog {
         headerBox.getChildren().addAll(titleLabel, versionLabel);
 
         // Main menu buttons
-        Button btnOpen = createButton("1. Open Project", "O", "Open an existing project from your code repositories", "#1976D2", "#E3F2FD");
-        Button btnClone = createButton("2. Git Clone", "G", "Clone a GitHub repository to your code repositories path", "#F57C00", "#FFF3E0");
-        Button btnNew = createButton("3. New Project", "N", "Create a new project from a template", "#388E3C", "#E8F5E9");
-        Button btnPrps = createButton("4. PRP Manager", "P", "Manage Project Requirement Prompts (PRPs)", "#7B1FA2", "#F3E5F5");
-        Button btnGlobalPrps = createButton("5. Global PRP Viewer", "B", "Browse PRPs across all projects", "#009688", "#E0F7FA");
-        Button btnSettings = createButton("6. Settings", "S", "Configure application settings and preferences", "#0097A7", "#E0F2F1");
-        Button btnIde = createButton("7. Open in IDE", "E", "Open current directory in configured IDE", "#D32F2F", "#FFEBEE");
-        Button btnExit = createButton("8. Exit", "X", "Exit the application", "#757575", "#F5F5F5");
+        Button btnOpen = createButton("F1   Open Project", "O", "Open an existing project from your code repositories", "#1976D2", "#E3F2FD");
+        Button btnClone = createButton("F2   Git Clone", "G", "Clone a GitHub repository to your code repositories path", "#F57C00", "#FFF3E0");
+        Button btnNew = createButton("F3   New Project", "N", "Create a new project from a template", "#388E3C", "#E8F5E9");
+        Button btnPrps = createButton("F4   PRP Manager", "P", "Manage Project Requirement Prompts (PRPs)", "#7B1FA2", "#F3E5F5");
+        Button btnGlobalPrps = createButton("F5   Global PRP Viewer", "B", "Browse PRPs across all projects", "#009688", "#E0F7FA");
+        Button btnSettings = createButton("F6   Settings", "S", "Configure application settings and preferences", "#0097A7", "#E0F2F1");
+        Button btnIde = createButton("F7   Open in IDE", "E", "Open current directory in configured IDE", "#D32F2F", "#FFEBEE");
+        Button btnExit = createButton("F8   Exit", "X", "Exit the application", "#757575", "#F5F5F5");
 
         btnOpen.setOnAction(e -> closeWithResult("OPEN_PROJECT", stage));
         btnClone.setOnAction(e -> closeWithResult("GIT_CLONE", stage));
@@ -108,7 +120,7 @@ public class MainMenuDialog {
         buttonBox.getChildren().addAll(btnOpen, btnClone, btnNew, btnPrps, btnGlobalPrps, btnSettings, btnIde, btnExit);
 
         // Footer
-        Label footerLabel = new Label("Use 1-8 or letter keys | Press ESC to go back | Double ESC to exit");
+        Label footerLabel = new Label("F1-F8, or the letter in each tooltip | Esc to exit");
         footerLabel.setStyle("-fx-font-size: 10; -fx-text-fill: #999; -fx-padding: 10 0 0 0;");
 
         root.getChildren().addAll(headerBox, buttonBox, footerLabel);
@@ -119,42 +131,42 @@ public class MainMenuDialog {
         // Keyboard shortcuts
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             switch (event.getCode()) {
-                case DIGIT1:
+                case F1:
                 case O:
                     closeWithResult("OPEN_PROJECT", stage);
                     event.consume();
                     break;
-                case DIGIT2:
+                case F2:
                 case G:
                     closeWithResult("GIT_CLONE", stage);
                     event.consume();
                     break;
-                case DIGIT3:
+                case F3:
                 case N:
                     closeWithResult("NEW_PROJECT", stage);
                     event.consume();
                     break;
-                case DIGIT4:
+                case F4:
                 case P:
                     closeWithResult("PRPS_MANAGER", stage);
                     event.consume();
                     break;
-                case DIGIT5:
+                case F5:
                 case B:
                     closeWithResult("GLOBAL_PRPS_MANAGER", stage);
                     event.consume();
                     break;
-                case DIGIT6:
+                case F6:
                 case S:
                     closeWithResult("SETTINGS", stage);
                     event.consume();
                     break;
-                case DIGIT7:
+                case F7:
                 case E:
                     closeWithResult("IDE_EDITOR", stage);
                     event.consume();
                     break;
-                case DIGIT8:
+                case F8:
                 case X:
                     closeWithResult("EXIT", stage);
                     event.consume();
@@ -189,7 +201,7 @@ public class MainMenuDialog {
                 "-fx-padding: 0;"
         );
 
-        String tooltipText = tooltip + " (Shortcut: " + shortcut + ")";
+        String tooltipText = tooltip + "   (or press " + shortcut + ")";
         btn.setTooltip(new Tooltip(tooltipText));
 
         return btn;

@@ -155,6 +155,19 @@ public class Main implements Runnable {
             if (exitCode != null) System.exit(exitCode);
         }
 
+        // Bare "proj" - the main menu - goes the same way, and for a second reason: the picker it
+        // leads to needs ArcadeDB, whose directory lock the daemon holds, so a menu shown here can
+        // offer an option that cannot work. What comes back is either "done", or the name of the
+        // one kind of item the daemon cannot carry out - the ones that prompt on this terminal.
+        String menuAction = null;
+        if (args.length == 0) {
+            var outcome = littlejlib.proj.daemon.MenuViaDaemon.run(isVerbose());
+            if (outcome != null) {
+                if (outcome.action() == null) System.exit(outcome.exitCode());
+                menuAction = outcome.action();
+            }
+        }
+
         try {
             terminal = TerminalBuilder.builder()
                     .system(true)
@@ -173,9 +186,15 @@ public class Main implements Runnable {
                 System.exit(0);
             }
 
+            // The daemon showed the menu and the user picked something that prompts on a terminal.
+            if (menuAction != null) {
+                runMenuAction(menuAction);
+                System.exit(0);
+            }
+
             // Check if CLI arguments provided
             if (args.length == 0) {
-                // No arguments - show JavaFX interactive menu
+                // No daemon to show it, so the menu runs here - the old path, still the fallback.
                 mainMenu();
             } else {
                 // CLI mode - use Picocli to parse and execute command
@@ -255,12 +274,29 @@ public class Main implements Runnable {
         terminal.writer().flush();
     }
 
+    /**
+     * The menu items the daemon hands back because they prompt on a terminal it does not have, or
+     * because "here" means the directory this process was started in rather than that one.
+     */
+    private static void runMenuAction(String action) {
+        switch (action) {
+            case "GIT_CLONE" -> GitManager.cloneRepository(terminal, lineReader, settings);
+            case "NEW_PROJECT" -> ProjectManager.createNewProject(terminal, lineReader, settings);
+            case "IDE_EDITOR" -> openCurrentDirInIDE();
+            default -> System.err.println("[proj] the daemon asked for an unknown action: " + action);
+        }
+    }
+
     private static void mainMenu() {
         // Show main menu - show once, sub-actions don't loop back
         MainMenuDialog.Action action = MainMenuDialog.show(settings);
 
         switch (action) {
             case OPEN_PROJECT:
+                // A daemon may have started since this menu opened - between the two, the whole
+                // point of this window is an option that then cannot open the database.
+                var exitCode = littlejlib.proj.daemon.OpenViaDaemon.open(isVerbose());
+                if (exitCode != null) System.exit(exitCode);
                 ProjectManager.openProject(terminal, lineReader, settings, getCachedProjects());
                 break;
             case GIT_CLONE:

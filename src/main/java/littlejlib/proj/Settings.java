@@ -18,6 +18,8 @@ public class Settings {
     private List<Organization> organizations;
     private String prpTemplateSrc; // URL or local path to PRP template file
     private String statusTemplate;
+    private List<String> pickerColumnOrder;   // PickerColumn ids, left to right; empty means the built-in order
+    private List<String> pickerHiddenColumns; // PickerColumn ids to start hidden; empty means each column's default
 
     public Settings() {
         this.additionalCodeReposPaths = new ArrayList<>();
@@ -25,6 +27,8 @@ public class Settings {
         this.ideLaunchers = new ArrayList<>();
         this.terminalLaunchers = new ArrayList<>();
         this.organizations = new ArrayList<>();
+        this.pickerColumnOrder = new ArrayList<>();
+        this.pickerHiddenColumns = new ArrayList<>();
         this.prpTemplateSrc = PRPTemplateLoader.DEFAULT_TEMPLATE_SRC; // Default GitHub Pages URL
         this.statusTemplate = "PRP Number: %index%\n" +
                 "PRP Name: %name%\n" +
@@ -230,6 +234,29 @@ public class Settings {
 
     public void setStatusTemplate(String statusTemplate) {
         this.statusTemplate = statusTemplate;
+    }
+
+    /**
+     * The picker's columns, left to right, by {@code PickerColumn} id.
+     * <p>
+     * Empty means "the built-in order", which is not the same as "no columns" - a picker that
+     * remembered an empty list as a layout would open showing nothing at all.
+     */
+    public List<String> getPickerColumnOrder() {
+        return pickerColumnOrder == null ? new ArrayList<>() : pickerColumnOrder;
+    }
+
+    public void setPickerColumnOrder(List<String> ids) {
+        this.pickerColumnOrder = ids == null ? new ArrayList<>() : new ArrayList<>(ids);
+    }
+
+    /** Columns to start hidden. Empty means each column's own default, not "show everything". */
+    public List<String> getPickerHiddenColumns() {
+        return pickerHiddenColumns == null ? new ArrayList<>() : pickerHiddenColumns;
+    }
+
+    public void setPickerHiddenColumns(List<String> ids) {
+        this.pickerHiddenColumns = ids == null ? new ArrayList<>() : new ArrayList<>(ids);
     }
 
     public int getProjectScanningDepth() {

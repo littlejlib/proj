@@ -35,7 +35,9 @@ public final class SettingsCodec {
             CODEBASE = "codebase",
             IDE = "ide",
             TERMINAL = "terminal",
-            ORG = "org";
+            ORG = "org",
+            PICKER_COLUMN_ORDER = "pickerColumns.order",
+            PICKER_COLUMNS_HIDDEN = "pickerColumns.hidden";
 
     // ---------- reading ----------
 
@@ -94,6 +96,9 @@ public final class SettingsCodec {
         }
         s.setOrganizations(orgs);
 
+        s.setPickerColumnOrder(Toml.list(map, PICKER_COLUMN_ORDER));
+        s.setPickerHiddenColumns(Toml.list(map, PICKER_COLUMNS_HIDDEN));
+
         return s;
     }
 
@@ -126,7 +131,8 @@ public final class SettingsCodec {
 
     /** True when this key holds a list, and so is edited with add/remove rather than set. */
     public static boolean isListKey(String key) {
-        return key != null && key.startsWith(CODEBASE + ".");
+        return key != null && (key.startsWith(CODEBASE + ".")
+                || PICKER_COLUMN_ORDER.equals(key) || PICKER_COLUMNS_HIDDEN.equals(key));
     }
 
     public static Object get(Settings s, String key) {
@@ -168,6 +174,16 @@ public final class SettingsCodec {
             }
             case STATUS_TEMPLATE -> {
                 s.setStatusTemplate(value);
+                return true;
+            }
+            // Whole-list assignment. These are list keys, so add/drop are the usual way in, but
+            // "set" has to replace outright - that is how the picker writes a reordered layout.
+            case PICKER_COLUMN_ORDER -> {
+                s.setPickerColumnOrder(cleaned(values));
+                return true;
+            }
+            case PICKER_COLUMNS_HIDDEN -> {
+                s.setPickerHiddenColumns(cleaned(values));
                 return true;
             }
             default -> { }
@@ -243,6 +259,9 @@ public final class SettingsCodec {
                 s.setProjectScanningDepth(4);
                 return true;
             }
+            // Empty is meaningful here: it restores the built-in order and the built-in visibility
+            // rather than leaving the picker with no columns.
+            case PICKER_COLUMN_ORDER, PICKER_COLUMNS_HIDDEN -> { return set(s, key, List.of()); }
             default -> { }
         }
 
@@ -279,6 +298,14 @@ public final class SettingsCodec {
     /** Appends to a list key, ignoring a value that is already there. */
     public static boolean addTo(Settings s, String key, List<String> values) {
         if (!isListKey(key)) return false;
+
+        if (PICKER_COLUMN_ORDER.equals(key) || PICKER_COLUMNS_HIDDEN.equals(key)) {
+            var list = new ArrayList<>(PICKER_COLUMN_ORDER.equals(key)
+                    ? s.getPickerColumnOrder() : s.getPickerHiddenColumns());
+            for (var v : cleaned(values)) if (!list.contains(v)) list.add(v);
+            return set(s, key, list);
+        }
+
         var type = CodeRepoBaseType.parse(key.substring(CODEBASE.length() + 1), null);
         if (type == null) return false;
 
@@ -300,6 +327,15 @@ public final class SettingsCodec {
 
     public static boolean removeFrom(Settings s, String key, List<String> values) {
         if (!isListKey(key)) return false;
+
+        if (PICKER_COLUMN_ORDER.equals(key) || PICKER_COLUMNS_HIDDEN.equals(key)) {
+            var list = new ArrayList<>(PICKER_COLUMN_ORDER.equals(key)
+                    ? s.getPickerColumnOrder() : s.getPickerHiddenColumns());
+            var dropped = list.removeAll(cleaned(values));
+            set(s, key, list);
+            return dropped;
+        }
+
         var list = new ArrayList<>(s.getCodeRepoBases());
         var removed = false;
         for (var v : values) {
@@ -399,6 +435,20 @@ public final class SettingsCodec {
         }
         out.append('\n');
 
+        out.append("# ---- project picker columns -------------------------------------------------\n");
+        out.append("# Which columns the picker shows and in what order, by id. Both are written for\n");
+        out.append("# you when you drag a column header or untick one in the table's own menu, so\n");
+        out.append("# editing them here is only for putting things back.\n");
+        out.append("# An EMPTY order means the built-in order; an empty hidden list means each\n");
+        out.append("# column's own default. Neither empty list means 'show nothing'.\n");
+        out.append("# Known ids: ").append(String.join(", ", littlejlib.proj.ui.PickerColumn.allIds())).append('\n');
+        // Split into segments: dotted() quotes any segment that is not bare, and handed the whole
+        // dotted key as one segment it would write 'pickerColumns.order' - a single key with a dot
+        // in its name, which parses cleanly and is not the key anything reads.
+        out.append(Toml.line(Toml.dotted(PICKER_COLUMN_ORDER.split("\\.")), s.getPickerColumnOrder())).append('\n');
+        out.append(Toml.line(Toml.dotted(PICKER_COLUMNS_HIDDEN.split("\\.")), s.getPickerHiddenColumns())).append('\n');
+        out.append('\n');
+
         out.append("# ---- PRP status template ----------------------------------------------------\n");
         out.append(Toml.line(Toml.dotted(STATUS_TEMPLATE), nz(s.getStatusTemplate()))).append('\n');
 
@@ -407,5 +457,11 @@ public final class SettingsCodec {
 
     static String nz(String s) {
         return s == null ? "" : s;
+    }
+
+    /** Trimmed, blanks dropped - a list key written by hand tends to arrive with stray spaces. */
+    static List<String> cleaned(List<String> values) {
+        if (values == null) return List.of();
+        return values.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).toList();
     }
 }

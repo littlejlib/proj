@@ -93,6 +93,11 @@ public class Server {
         synchronized (lock) {
             return switch (verb) {
                 case "open", "o", "" -> openPicker();
+                // The main menu, for the same reason as the picker and one more. The picker it
+                // leads to needs the ArcadeDB lock this process is already holding, so a menu shown
+                // in the client can offer an option that cannot work; and the menu is a JavaFX
+                // window, which is free here and costs a cold toolkit start anywhere else.
+                case "menu" -> MenuService.serve(request, tray::note, this::openPicker);
                 // Read-only index queries are served here because the daemon holds ArcadeDB's
                 // exclusive directory lock. A CLI process cannot open the same database while this
                 // one is alive, so the query comes to the data rather than the other way round.

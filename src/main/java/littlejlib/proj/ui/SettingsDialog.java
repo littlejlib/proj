@@ -19,6 +19,7 @@ import littlejlib.proj.terminal.TerminalRunner;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -73,6 +74,19 @@ public final class SettingsDialog {
         var agentCommand = new TextField(settings.getAgentCommand() == null
                 ? AgentLauncher.DEFAULT_AGENT_COMMAND : settings.getAgentCommand());
 
+        // One tick per picker column, in the order the picker will show them. An empty hidden list
+        // means "nobody has chosen yet", not "everything is on", so the boxes start from each
+        // column's own default until a layout has actually been recorded.
+        var hiddenNow = Set.copyOf(settings.getPickerHiddenColumns());
+        var chosenBefore = !settings.getPickerColumnOrder().isEmpty() || !hiddenNow.isEmpty();
+        var columnBoxes = new java.util.LinkedHashMap<PickerColumn, CheckBox>();
+        for (var which : PickerColumn.order(settings.getPickerColumnOrder())) {
+            var box = new CheckBox(which.title);
+            box.setSelected(chosenBefore ? !hiddenNow.contains(which.id) : which.shownByDefault);
+            box.setTooltip(new Tooltip("id: " + which.id));
+            columnBoxes.put(which, box);
+        }
+
         var tabs = new TabPane();
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         VBox.setVgrow(tabs, Priority.ALWAYS);
@@ -81,6 +95,7 @@ public final class SettingsDialog {
         tabs.getTabs().add(new Tab("Terminals", terminalsTab(terminals, defaultTerminal)));
         tabs.getTabs().add(new Tab("Editors and IDEs", idesTab(ides, editor)));
         tabs.getTabs().add(new Tab("PRP and agent", prpTab(prpTemplate, agentCommand)));
+        tabs.getTabs().add(new Tab("Picker columns", columnsTab(columnBoxes)));
         tabs.getTabs().add(new Tab("Scanning", scanningTab(depth)));
 
         var file = new Label("Settings file: " + new SettingsManager().getSettingsFilePath());
@@ -101,7 +116,23 @@ public final class SettingsDialog {
             settings.setSingleFileEditor(editor.getText());
             settings.setPrpTemplateSrc(prpTemplate.getText());
             settings.setProjectScanningDepth(depth.getValue());
+
+            var hiddenColumns = new ArrayList<String>();
+            columnBoxes.forEach((which, box) -> {
+                if (!box.isSelected()) hiddenColumns.add(which.id);
+            });
+            settings.setPickerHiddenColumns(hiddenColumns);
+            // Record the order too, even untouched. Without it the hidden list stays ambiguous -
+            // an empty one would keep reading as "never chosen", and ticking every box back on
+            // would silently restore the defaults instead of showing everything.
+            if (settings.getPickerColumnOrder().isEmpty()) {
+                settings.setPickerColumnOrder(columnBoxes.keySet().stream().map(c -> c.id).toList());
+            }
+
             new SettingsManager().saveSettings(settings);
+            // The picker builds its columns once, at construction, and the daemon keeps that window
+            // for days. Without this the ticks above would not take effect until the daemon restarted.
+            PickerHost.invalidate();
             saved[0] = true;
             stage.close();
         });
@@ -305,6 +336,36 @@ public final class SettingsDialog {
         reset.setOnAction(e -> agentCommand.setText(AgentLauncher.DEFAULT_AGENT_COMMAND));
         grid.getChildren().add(reset);
         return grid;
+    }
+
+    /**
+     * Which columns the picker shows. Order is not edited here on purpose: dragging a header is a
+     * better way to say it than a pair of up/down buttons, and the picker already writes that back.
+     */
+    static VBox columnsTab(java.util.Map<PickerColumn, CheckBox> boxes) {
+        var grid = new VBox(6);
+        grid.setPadding(new Insets(10));
+        boxes.values().forEach(grid.getChildren()::add);
+
+        var all = new Button("Show all");
+        all.setOnAction(e -> boxes.values().forEach(b -> b.setSelected(true)));
+        var defaults = new Button("Reset to defaults");
+        defaults.setOnAction(e -> boxes.forEach((which, b) -> b.setSelected(which.shownByDefault)));
+
+        var bar = new HBox(8, all, defaults);
+        bar.setAlignment(Pos.CENTER_LEFT);
+
+        var note = new Label("The same ticks are in the picker's own menu button, at the top right of "
+                + "its header - this tab exists so they can be found. Column ORDER is not set here: "
+                + "drag a header in the picker instead, which is remembered the same way.\n\n"
+                + "JavaFX cannot freeze a column, so on a narrow screen fewer columns is the only "
+                + "real cure for having to scroll sideways to read a row.");
+        note.setWrapText(true);
+        note.setStyle("-fx-font-size: 11px; -fx-text-fill: #555;");
+
+        var box = new VBox(10, grid, bar, note);
+        box.setPadding(new Insets(10));
+        return box;
     }
 
     static VBox scanningTab(Spinner<Integer> depth) {

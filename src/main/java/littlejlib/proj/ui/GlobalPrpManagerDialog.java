@@ -28,6 +28,12 @@ import java.util.stream.Collectors;
  * Global PRP Manager dialog - browse PRPs across all projects.
  * Shows a SplitPane with TreeView on left (grouped by project) and
  * read-only content preview on right.
+ * <p>
+ * FUNCTION KEYS, sharing {@link PrpManagerDialog}'s numbering wherever the two windows offer the
+ * same action, so F2 is open and F4 is copy-path in both. The letters this used to bind were
+ * unreachable while typing a search - the guard against that was to ignore every shortcut while the
+ * search box had the focus, which made the actions unreachable in the state the window spends most
+ * of its life in. A function key needs no such guard, so the guard is gone with the letters.
  */
 public class GlobalPrpManagerDialog {
 
@@ -36,9 +42,11 @@ public class GlobalPrpManagerDialog {
      */
     public static void show(Settings settings) {
         System.out.println("[GlobalPrpManagerDialog] Showing global PRP manager dialog");
+        // Long, for the same reason as the picker: the wait is on a person, and a timeout in the
+        // daemon would answer the client while the window was still open.
         JavaFXManager.getInstance().showDialog(
                 (lock, resultHolder) -> showOnFxThread(settings, lock, resultHolder),
-                600000  // 10 minute timeout
+                900_000
         );
     }
 
@@ -96,7 +104,8 @@ public class GlobalPrpManagerDialog {
         statusFilter.setValue("All");
         statusFilter.setStyle("-fx-font-size: 12;");
 
-        final Button refreshButton = new Button("Refresh");
+        final Button refreshButton = new Button("F12  Refresh");
+        refreshButton.setTooltip(new Tooltip("Rescan every project for PRPs   (F12)"));
         refreshButton.setStyle(
                 "-fx-padding: 6 15 6 15;" +
                 "-fx-background-color: #E3F2FD;" +
@@ -176,8 +185,9 @@ public class GlobalPrpManagerDialog {
                     allEntries.addAll(entries);
                     rebuildTree(treeView, allEntries, searchField.getText(), statusFilter.getValue());
                     int projectCount = countProjects(allEntries);
-                    statusLabel.setText(allEntries.size() + " PRPs across " + projectCount + " projects | " +
-                            "\u2191\u2193: Navigate | Space: Expand | (O)pen | (P)ath | (C)laude | (S)tatus | (F)older | Esc: Close");
+                    statusLabel.setText(allEntries.size() + " PRPs across " + projectCount + " projects | "
+                            + "\u2191\u2193 navigate | Space expand | F2 open | F3 status | F4 path "
+                            + "| F5 claude | F6 folder | F12 refresh | Esc close");
                     refreshButton.setDisable(false);
                 });
             }, "GlobalPRP-Scan");
@@ -205,55 +215,85 @@ public class GlobalPrpManagerDialog {
 
         // --- Keyboard shortcuts ---
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            // Don't intercept key events when search field is focused (except Escape and Down)
-            if (searchField.isFocused()) {
-                if (event.getCode() == KeyCode.ESCAPE) {
-                    stage.close();
-                    event.consume();
-                } else if (event.getCode() == KeyCode.DOWN) {
-                    treeView.requestFocus();
-                    if (treeView.getSelectionModel().isEmpty() && treeView.getRoot() != null
-                            && !treeView.getRoot().getChildren().isEmpty()) {
-                        treeView.getSelectionModel().select(treeView.getRoot().getChildren().get(0));
-                    }
-                    event.consume();
+            var code = event.getCode();
+
+            if (code == KeyCode.ESCAPE) {
+                stage.close();
+                event.consume();
+                return;
+            }
+            if (code == KeyCode.F12) {
+                refreshButton.fire();
+                event.consume();
+                return;
+            }
+            if (code == KeyCode.DOWN && searchField.isFocused()) {
+                treeView.requestFocus();
+                if (treeView.getSelectionModel().isEmpty() && treeView.getRoot() != null
+                        && !treeView.getRoot().getChildren().isEmpty()) {
+                    treeView.getSelectionModel().select(treeView.getRoot().getChildren().get(0));
                 }
+                event.consume();
                 return;
             }
 
-            TreeItem<GlobalPrpTreeNode> selected = treeView.getSelectionModel().getSelectedItem();
+            var selected = treeView.getSelectionModel().getSelectedItem();
+            if (selected == null || selected.getValue() == null) return;
+            var node = selected.getValue();
 
-            if (event.getCode() == KeyCode.ESCAPE) {
-                stage.close();
-                event.consume();
-            } else if (selected != null && selected.getValue() != null) {
-                GlobalPrpTreeNode node = selected.getValue();
-
-                if (event.getCode() == KeyCode.SPACE) {
+            // Navigation stays with the tree, so a space typed into the search box is a space.
+            if (treeView.isFocused()) {
+                if (code == KeyCode.SPACE) {
                     selected.setExpanded(!selected.isExpanded());
                     event.consume();
-                } else if (event.getCode() == KeyCode.RIGHT && node.type == NodeType.PROJECT_GROUP) {
+                    return;
+                }
+                if (code == KeyCode.RIGHT && node.type == NodeType.PROJECT_GROUP) {
                     selected.setExpanded(true);
                     event.consume();
-                } else if (event.getCode() == KeyCode.LEFT && node.type == NodeType.PROJECT_GROUP) {
+                    return;
+                }
+                if (code == KeyCode.LEFT && node.type == NodeType.PROJECT_GROUP) {
                     selected.setExpanded(false);
                     event.consume();
-                } else if (event.getCode() == KeyCode.O && node.type == NodeType.PRP_ROOT) {
+                    return;
+                }
+            }
+
+            // A project group row has a prp folder and nothing else, so F6 works there and the
+            // rest do not - they act on one PRP, and the group is a heading rather than a PRP.
+            if (code == KeyCode.F6) {
+                var folder = node.type == NodeType.PRP_ROOT ? node.entry.getPrpDir() : node.prpDirPath;
+                if (folder != null) {
+                    PrpManagerActions.openFolder(folder);
+                    statusLabel.setText("\u2713 Opening folder");
+                }
+                event.consume();
+                return;
+            }
+
+            if (node.type != NodeType.PRP_ROOT) return;
+
+            switch (code) {
+                case F2 -> {
                     PrpManagerActions.openInEditor(node.entry.getPrpEntry().getMainFile(), settings);
                     statusLabel.setText("\u2713 Opening: " + node.entry.getPrpEntry().getMainFile().getFileName());
                     event.consume();
-                } else if (event.getCode() == KeyCode.S && node.type == NodeType.PRP_ROOT) {
+                }
+                case F3 -> {
                     PrpManagerActions.openStatusFile(node.entry.getPrpEntry(), settings, node.entry.getPrpDir());
                     statusLabel.setText("\u2713 Opening status file");
                     event.consume();
-                } else if (event.getCode() == KeyCode.P && node.type == NodeType.PRP_ROOT) {
-                    Path filePath = node.entry.getPrpEntry().getMainFile();
+                }
+                case F4 -> {
+                    var filePath = node.entry.getPrpEntry().getMainFile();
                     PrpManagerActions.copyToClipboard(filePath, PrpManagerActions.CopyFormat.FULL_PATH);
                     statusLabel.setText("\u2713 Copied path: " + filePath.getFileName());
                     event.consume();
-                } else if (event.getCode() == KeyCode.C && node.type == NodeType.PRP_ROOT) {
-                    Path filePath = node.entry.getPrpEntry().getMainFile();
-                    // Compute Claude path relative to the PRP's own project root
+                }
+                case F5 -> {
+                    var filePath = node.entry.getPrpEntry().getMainFile();
+                    // Relative to the PRP's OWN project root, which is not this window's directory.
                     String claudePath = "@" + node.entry.getProjectPath()
                             .relativize(filePath).toString().replace("\\", "/");
                     javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
@@ -262,18 +302,8 @@ public class GlobalPrpManagerDialog {
                     clipboard.setContent(content);
                     statusLabel.setText("\u2713 Copied Claude: " + claudePath);
                     event.consume();
-                } else if (event.getCode() == KeyCode.F && node.type == NodeType.PRP_ROOT) {
-                    PrpManagerActions.openFolder(node.entry.getPrpDir());
-                    statusLabel.setText("\u2713 Opening folder");
-                    event.consume();
-                } else if (event.getCode() == KeyCode.F && node.type == NodeType.PROJECT_GROUP) {
-                    // Open the project's prp folder
-                    if (node.prpDirPath != null) {
-                        PrpManagerActions.openFolder(node.prpDirPath);
-                        statusLabel.setText("\u2713 Opening folder");
-                    }
-                    event.consume();
                 }
+                default -> { }
             }
         });
 

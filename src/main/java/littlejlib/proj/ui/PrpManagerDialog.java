@@ -22,6 +22,19 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * The per-project PRP manager.
+ * <p>
+ * FUNCTION KEYS, and the bug they fix. The actions used to be single letters - O, S, P, C, F, T, N -
+ * bound on a scene-wide event filter with no check on where the focus was. The search box is the
+ * first thing focused and the thing you are in for most of this window's life, so typing "improve"
+ * into it opened an editor on the selected PRP, copied a path, and opened Explorer, in that order.
+ * Space had the same problem in the other direction: it toggled the tree instead of typing a space.
+ * <p>
+ * A function key belongs to no text field, so the two are orthogonal and neither has to be reached
+ * by tabbing away from the other. The numbering is shared with {@link GlobalPrpManagerDialog} for
+ * the actions the two have in common, so F2 is always open and F4 is always copy-path.
+ */
 public class PrpManagerDialog {
 
     private static final Object lockObject = new Object();
@@ -33,9 +46,11 @@ public class PrpManagerDialog {
      */
     public static Result show(Path prpDir, Settings settings) {
         System.out.println("[PrpManagerDialog] Showing PRP manager dialog");
+        // Long: what is being waited on is a person. Served from the daemon a short timeout would
+        // hand the client an answer while the window was still open in front of the user.
         return JavaFXManager.getInstance().showDialog(
             (lock, resultHolder) -> showOnFxThread(prpDir, settings, lock, resultHolder),
-            600000  // 10 minute timeout - user may work with PRPs for a while
+            900_000
         );
     }
 
@@ -111,8 +126,8 @@ public class PrpManagerDialog {
         searchField.setPromptText("Search by index or name (e.g., '17' or 'improve')");
         searchField.setStyle("-fx-padding: 6 10 6 10; -fx-font-size: 12;");
 
-        final Button refreshButton = new Button("Refresh");
-        refreshButton.setTooltip(new Tooltip("Rescan PRP directory"));
+        final Button refreshButton = new Button("F12  Refresh");
+        refreshButton.setTooltip(new Tooltip("Rescan PRP directory   (F12)"));
         refreshButton.setStyle(
                 "-fx-padding: 6 15 6 15;" +
                 "-fx-background-color: #E3F2FD;" +
@@ -122,8 +137,8 @@ public class PrpManagerDialog {
                 "-fx-border-radius: 3;"
         );
 
-        final Button newPrpButton = new Button("+ New PRP");
-        newPrpButton.setTooltip(new Tooltip("Create a new PRP (Keyboard: N)"));
+        final Button newPrpButton = new Button("F1  + New PRP");
+        newPrpButton.setTooltip(new Tooltip("Create a new PRP   (F1)"));
         newPrpButton.setStyle(
             "-fx-padding: 6 15 6 15;" +
             "-fx-background-color: #E8F5E9;" +  // Light green background
@@ -135,10 +150,10 @@ public class PrpManagerDialog {
         
         // The step this whole window used to end one short of: having written the PRP, the next
         // thing anyone does is copy its path, open a terminal, navigate to the project and paste.
-        final Button startAgentButton = new Button("Start agent on PRP");
+        final Button startAgentButton = new Button("F8  Start agent on PRP");
         startAgentButton.setTooltip(new Tooltip(
                 "Open a terminal at the PROJECT root - not the prp folder - running the coding agent "
-                        + "with the selected PRP as its instruction"));
+                        + "with the selected PRP as its instruction   (F8)"));
         startAgentButton.setStyle(
             "-fx-padding: 6 15 6 15;" +
             "-fx-background-color: #F3E5F5;" +
@@ -170,7 +185,8 @@ public class PrpManagerDialog {
         root.getChildren().add(treeView);
 
         // Status bar - shows messages
-        final Label statusLabel = new Label("↑↓: Navigate | Space: Expand/Collapse | (P)ath | (C)laude | (O)pen | (T)oggle | (N)ew | (S)tatus | (F)older | Esc: Back");
+        final Label statusLabel = new Label("↑↓ navigate | Space expand | F1 new | F2 open | F3 status "
+                + "| F4 path | F5 claude | F6 folder | F7 toggle | F8 agent | F12 refresh | Esc back");
         statusLabel.setStyle("-fx-font-size: 10; -fx-text-fill: #666; -fx-padding: 4; -fx-border-color: #ddd; -fx-border-width: 1 0 0 0;");
         root.getChildren().add(statusLabel);
 
@@ -241,88 +257,131 @@ public class PrpManagerDialog {
         // Focus on tree
         Platform.runLater(() -> treeView.requestFocus());
 
-        // Keyboard shortcuts
+        // Keyboard shortcuts. Function keys are handled for the whole scene, so each one reaches its
+        // action from the search box as readily as from the tree. The navigation keys are guarded on
+        // the tree actually holding the focus, so Space and the arrows still belong to whatever the
+        // user is typing in - unguarded, Space was swallowed here and the search box could not take one.
         scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            TreeItem<PrpTreeNode> selected = treeView.getSelectionModel().getSelectedItem();
+            var code = event.getCode();
 
-            if (event.getCode() == KeyCode.ESCAPE) {
+            if (code == KeyCode.ESCAPE) {
                 stage.close();
                 event.consume();
-            } else if (event.getCode() == KeyCode.DOWN && searchField.isFocused()) {
+                return;
+            }
+
+            // The actions that need nothing selected.
+            if (code == KeyCode.F1) {
+                newPrpButton.fire();
+                event.consume();
+                return;
+            }
+            if (code == KeyCode.F12) {
+                refreshButton.fire();
+                event.consume();
+                return;
+            }
+            if (code == KeyCode.F6) {
+                PrpManagerActions.openFolder(prpDir);
+                statusLabel.setText("✓ Opening folder in explorer");
+                event.consume();
+                return;
+            }
+            if (code == KeyCode.F8) {
+                startAgentButton.fire();
+                event.consume();
+                return;
+            }
+
+            if (code == KeyCode.DOWN && searchField.isFocused()) {
                 treeView.requestFocus();
-                if (treeView.getSelectionModel().isEmpty() && treeView.getRoot().getChildren().size() > 0) {
+                if (treeView.getSelectionModel().isEmpty() && !treeView.getRoot().getChildren().isEmpty()) {
                     treeView.getSelectionModel().select(treeView.getRoot().getChildren().get(0));
                 }
                 event.consume();
-            } else if (selected != null && selected.getValue() != null) {
-                PrpTreeNode node = selected.getValue();
+                return;
+            }
 
-                if (event.getCode() == KeyCode.SPACE) {
-                    // Expand/Collapse with Space
+            var selected = treeView.getSelectionModel().getSelectedItem();
+            if (selected == null || selected.getValue() == null) return;
+            var node = selected.getValue();
+
+            if (treeView.isFocused()) {
+                if (code == KeyCode.SPACE) {
                     selected.setExpanded(!selected.isExpanded());
                     statusLabel.setText("✓ " + (selected.isExpanded() ? "Expanded" : "Collapsed"));
                     event.consume();
-                } else if (event.getCode() == KeyCode.RIGHT && node.isRoot) {
+                    return;
+                }
+                if (code == KeyCode.RIGHT && node.isRoot) {
                     selected.setExpanded(true);
                     event.consume();
-                } else if (event.getCode() == KeyCode.LEFT && node.isRoot) {
+                    return;
+                }
+                if (code == KeyCode.LEFT && node.isRoot) {
                     selected.setExpanded(false);
                     event.consume();
-                } else if (event.getCode() == KeyCode.O) {
-                    // (O)pen/Edit
-                    if (node.isRoot) {
-                        PrpManagerActions.openInEditor(node.prp.getMainFile(), settings);
-                        statusLabel.setText("✓ Opening: " + node.prp.getMainFile().getFileName());
+                    return;
+                }
+            }
+
+            // The placeholder row for a status file that does not exist yet carries no path, so
+            // every action reading one has to cope with null rather than throw out of the filter.
+            var file = node.isRoot ? node.prp.getMainFile() : node.file;
+
+            switch (code) {
+                case F2 -> {
+                    if (file == null) {
+                        statusLabel.setText("That file does not exist yet - F3 creates the status file");
                     } else {
-                        PrpManagerActions.openInEditor(node.file, settings);
-                        statusLabel.setText("✓ Opening: " + node.file.getFileName());
+                        PrpManagerActions.openInEditor(file, settings);
+                        statusLabel.setText("✓ Opening: " + file.getFileName());
                     }
-                    event.consume();
-                } else if (event.getCode() == KeyCode.S && node.isRoot) {
-                    // (S)tatus file
-                    PrpManagerActions.openStatusFile(node.prp, settings, prpDir);
-                    statusLabel.setText("✓ Opening status file: " + node.prp.getIndex() + "-prp.status.md");
-                    event.consume();
-                } else if (event.getCode() == KeyCode.P) {
-                    // (P)ath - copy full path
-                    Path fileToCopy = node.isRoot ? node.prp.getMainFile() : node.file;
-                    PrpManagerActions.copyToClipboard(fileToCopy, PrpManagerActions.CopyFormat.FULL_PATH);
-                    statusLabel.setText("✓ Copied Path: " + fileToCopy.getFileName());
-                    event.consume();
-                } else if (event.getCode() == KeyCode.C) {
-                    // (C)laude format
-                    Path fileToCopy = node.isRoot ? node.prp.getMainFile() : node.file;
-                    PrpManagerActions.copyToClipboard(fileToCopy, PrpManagerActions.CopyFormat.CLAUDE_PATH);
-                    statusLabel.setText("✓ Copied Claude: @prp/" + fileToCopy.getFileName());
-                    event.consume();
-                } else if (event.getCode() == KeyCode.F) {
-                    // (F)older
-                    PrpManagerActions.openFolder(prpDir);
-                    statusLabel.setText("✓ Opening folder in explorer");
-                    event.consume();
-                } else if (event.getCode() == KeyCode.T && node.isRoot) {
-                    // (T)oggle ACTIVE/CLOSED status
-                    PrpManagerActions.togglePrpStatus(node.prp);
-                    statusLabel.setText("✓ Toggled status to: " + node.prp.getStatus().getLabel());
-                    try {
-                        Thread.sleep(200); // Brief delay for file system
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    refreshButton.fire();
-                    event.consume();
-                } else if (event.getCode() == KeyCode.N) {
-                    // (N)ew PRP
-                    PrpManagerActions.createNewPrp(settings, prpDir);
-                    statusLabel.setText("✓ Creating new PRP...");
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    refreshButton.fire();
                     event.consume();
                 }
+                case F3 -> {
+                    if (node.isRoot) {
+                        PrpManagerActions.openStatusFile(node.prp, settings, prpDir);
+                        statusLabel.setText("✓ Opening status file: " + node.prp.getIndex() + "-prp.status.md");
+                    } else {
+                        statusLabel.setText("Select the PRP itself to open its status file");
+                    }
+                    event.consume();
+                }
+                case F4 -> {
+                    if (file == null) {
+                        statusLabel.setText("That file does not exist yet, so it has no path to copy");
+                    } else {
+                        PrpManagerActions.copyToClipboard(file, PrpManagerActions.CopyFormat.FULL_PATH);
+                        statusLabel.setText("✓ Copied Path: " + file.getFileName());
+                    }
+                    event.consume();
+                }
+                case F5 -> {
+                    if (file == null) {
+                        statusLabel.setText("That file does not exist yet, so it has no path to copy");
+                    } else {
+                        PrpManagerActions.copyToClipboard(file, PrpManagerActions.CopyFormat.CLAUDE_PATH);
+                        statusLabel.setText("✓ Copied Claude: @prp/" + file.getFileName());
+                    }
+                    event.consume();
+                }
+                case F7 -> {
+                    if (node.isRoot) {
+                        PrpManagerActions.togglePrpStatus(node.prp);
+                        statusLabel.setText("✓ Toggled status to: " + node.prp.getStatus().getLabel());
+                        try {
+                            Thread.sleep(200); // Brief delay for file system
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        refreshButton.fire();
+                    } else {
+                        statusLabel.setText("Select the PRP itself to toggle its status");
+                    }
+                    event.consume();
+                }
+                default -> { }
             }
         });
 
