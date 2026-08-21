@@ -1,0 +1,128 @@
+/*
+ * Styles for the transcripts pane. DELIBERATELY CLOSE TO DEFAULT.
+ *
+ * There was a warm-paper palette here - off-white grounds, burnt-sienna accent - and it was tried
+ * across the whole window and dropped: it read as sepia, it fought the pastel action chips the
+ * project table uses, and it made a tool look like a theme. What survives is only what the pane
+ * actually needs: names for the text roles it paints (a title, a path, a fact line, a turn body) and
+ * the two small controls it adds. Everything else is Modena.
+ *
+ * So: no font-family override, no font-size override, no background on .root, nothing touching tabs
+ * or tables. Colour is used only where it carries meaning - a path is blue because it is a path, a
+ * warning is amber because it is a warning - and the per-action tints of the legend live in code,
+ * shared with the project table, not here.
+ */
+.root {
+    -fx-ink:   #1c1c1c;
+    -fx-muted: #6b6b6b;
+    -fx-line:  #dcdcdc;
+    -fx-path:  #1565c0;
+    -fx-warn:  #b35c00;
+}
+
+.search-field {
+    -fx-font-size: 15px;
+}
+
+.chip {
+    -fx-background-color: #eeeeee;
+    -fx-background-radius: 3;
+    -fx-padding: 2 7 2 7;
+    -fx-text-fill: -fx-muted;
+    -fx-font-size: 11px;
+}
+
+.chip-on {
+    -fx-background-color: #e3f2fd;
+    -fx-text-fill: -fx-path;
+    -fx-font-weight: bold;
+}
+
+.chip-field {
+    -fx-font-size: 12px;
+    -fx-prompt-text-fill: -fx-muted;
+}
+
+.status-bar {
+    -fx-border-color: -fx-line;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 5 10 5 10;
+}
+
+.legend-label {
+    -fx-text-fill: -fx-muted;
+    -fx-font-size: 11px;
+}
+
+.hit-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-ink;
+}
+
+.hit-path {
+    -fx-font-family: "Cascadia Mono", "Consolas", monospace;
+    -fx-font-size: 11.5px;
+    -fx-text-fill: -fx-path;
+}
+
+.hit-facts {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-muted;
+}
+
+.hit-snippet {
+    -fx-font-size: 12px;
+    -fx-text-fill: #333333;
+}
+
+.warn-note {
+    -fx-text-fill: -fx-warn;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.list-cell {
+    -fx-padding: 8 10 8 10;
+    -fx-border-color: transparent transparent -fx-line transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.turn-human {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-ink;
+    -fx-font-weight: bold;
+}
+
+.turn-body {
+    -fx-font-family: "Cascadia Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-text-fill: #2b2b2b;
+}
+
+.turn-meta {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -fx-muted;
+}
+
+.section-head {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-muted;
+    -fx-padding: 6 0 2 0;
+}
+
+.text-area, .text-area .content {
+    -fx-font-family: "Cascadia Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+}
+
+.split-pane { -fx-padding: 0; }
+
+.toast {
+    -fx-background-color: #2e7d32;
+    -fx-text-fill: white;
+    -fx-background-radius: 3;
+    -fx-padding: 4 10 4 10;
+    -fx-font-size: 11px;
+}

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.littlejlib</groupId>
+    <artifactId>littlejlib-proj</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+    <description>proj - the index of every repository on this machine, and the PRP tool. Maven coordinates, git state, dependency graph and Maven Central status across all configured code bases, with a keyboard-first picker and a resident daemon.</description>
+
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <main.class>littlejlib.proj.Main</main.class>
+        <exec.mainClass>${main.class}</exec.mainClass>
+        <arcadedb.version>26.7.3</arcadedb.version>
+        <datahelper.version>1.4</datahelper.version>
+        <datahelper.processor.version>1.0</datahelper.processor.version>
+        <jackson.version>2.18.2</jackson.version>
+        <!-- ArcadeDB 26.x calls com.google.gson.Strictness, absent before Gson 2.11.
+             An older Gson resolves fine and then kills the DB at startup. -->
+        <gson.version>2.14.0</gson.version>
+        <!-- JavaFX version. Was 17, with the macOS build overriding to 21 because JavaFX 17
+             crashes on modern macOS with 'invalid NSTrackingRectTag' (JDK-8296654, fixed in
+             JavaFX 20). Now 25.0.2 for everyone, which also covers that: the transcripts half
+             of this jar is built on luvjfx, whose own bytecode is compiled against 25.0.2, and
+             a call it makes into an API that only exists after 17 would be a NoSuchMethodError
+             at runtime rather than a build failure. One version, no such class of bug. -->
+        <javafx.version>25.0.2</javafx.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>3.25.1</version>
+        </dependency>
+
+        <!-- ArcadeDB. Pinned to the same version as jacli (littlejlib-jacli), which
+             joins this classpath in phase D; two ArcadeDB versions in one shaded jar
+             do not coexist. -->
+        <dependency>
+            <groupId>com.arcadedb</groupId>
+            <artifactId>arcadedb-engine</artifactId>
+            <version>${arcadedb.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.arcadedb</groupId>
+            <artifactId>arcadedb-server</artifactId>
+            <version>${arcadedb.version}</version>
+        </dependency>
+
+        <!-- @ArcadeData: DTO generation plus the typed Query/Upsert API. Replaces the
+             initialize_document_schema + document_crud_helper pair. -->
+        <dependency>
+            <groupId>io.github.xyz-jphil</groupId>
+            <artifactId>xyz-jphil-arcadedb-datahelper</artifactId>
+            <version>${datahelper.version}</version>
+        </dependency>
+
+        <!-- SetConsoleOutputCP(65001) in-process, via FFM. Replaces the `chcp 65001`
+             that proj.bat used to run before the JVM; proj.exe has no batch wrapper
+             left to do it. -->
+        <dependency>
+            <groupId>io.github.xyz-jphil</groupId>
+            <artifactId>xyz-jphil-windows_console_set_unicode_output</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <!-- Lombok for cleaner code -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.38</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Gson for JSON serialization -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+
+        <!-- jsoup reads pom.xml. maven-model would pull plexus-utils for the same
+             six fields, and MavenXpp3Reader does not resolve <parent> inheritance
+             either, so it buys nothing here. -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.3</version>
+        </dependency>
+
+        <!-- Picocli for command-line interface -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>4.7.7</version>
+        </dependency>
+
+        <!-- JavaFX for UI picker. Version via ${javafx.version}; native platform via
+             -Djavafx.platform (win by default, mac-aarch64/mac for macOS). All three modules are
+             pinned to the same version so the AutocompletionTextField control's older transitive
+             javafx is overridden. javafx-fxml is gone entirely, and excluded from that control:
+             nothing here loads an FXML, and the only .fxml inside that jar belongs to a class the
+             jar does not even ship. -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <!-- AutocompletionTextField control -->
+        <dependency>
+            <groupId>io.github.xyz-jphil.jfx</groupId>
+            <artifactId>xyz-jphil-jfx-controls-AutocompletionTextField</artifactId>
+            <version>1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-fxml</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- luvml: the house HTML DSL. Writes the semantic-xhtml export, in the same element
+             vocabulary and against the same published stylesheet as the claude.ai conversation
+             downloader, so one viewer renders both. -->
+        <dependency>
+            <groupId>io.github.luvml</groupId>
+            <artifactId>luvml</artifactId>
+            <version>2.0</version>
+        </dependency>
+
+        <!-- luvjfx: the house JavaFX builder DSL, used by the transcripts half. -->
+        <dependency>
+            <groupId>io.github.luvml</groupId>
+            <artifactId>luvjfx</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Jackson, for the transcripts half. jsonl is read with the STREAMING parser and never
+             a tree: a single line in that store has been measured at 1.35 MB of base64, and
+             getText() on such a value is the difference between indexing 811 MB in nine seconds
+             and not indexing it at all. toml is the settings format. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-toml</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Plain @Data (no database attached), which the transcripts settings DTO uses. -->
+        <dependency>
+            <groupId>io.github.xyz-jphil</groupId>
+            <artifactId>xyz-jphil-datahelper-annotations</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.xyz-jphil</groupId>
+            <artifactId>xyz-jphil-datahelper-base</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <!-- The global summon key needs NO dependency. It was briefly jnativehook, as uskoag-gdrive
+             uses for its Alt-Alt overlay, and that was the wrong tool: a low-level hook can only
+             OBSERVE a key, so anything Windows already uses would have fired twice. RegisterHotKey
+             claims the combination instead, and reaches it through FFM - see util/GlobalHotkey. -->
+
+        <!-- The AOT training route (littlejlib/jr/aot). The mechanism lives there so every jr-launched
+             tool shares it; littlejlib.proj.aot.AotWarmup keeps only what is proj-specific. -->
+        <dependency>
+            <groupId>io.github.littlejlib</groupId>
+            <artifactId>littlejlib-aot</artifactId>
+            <version>1.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <release>25</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.38</version>
+                        </path>
+                        <path>
+                            <groupId>io.github.xyz-jphil</groupId>
+                            <artifactId>xyz-jphil-datahelper-processor</artifactId>
+                            <version>${datahelper.processor.version}</version>
+                        </path>
+                        <path>
+                            <groupId>io.github.xyz-jphil</groupId>
+                            <artifactId>xyz-jphil-arcadedb-datahelper-processor</artifactId>
+                            <version>${datahelper.processor.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${main.class}</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
