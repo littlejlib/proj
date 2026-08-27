@@ -17,7 +17,7 @@ import picocli.CommandLine.*;
     mixinStandardHelpOptions = true,
     version = "cct 1.0",
     description = "Find the claude-code conversation you half-remember, by what was said in it.",
-    subcommands = {IndexCmd.class, FindCmd.class, ShowCmd.class, ResumeCmd.class, ExportCmd.class},
+    subcommands = {IndexCmd.class, FindCmd.class, ShowCmd.class, ResumeCmd.class, ExportCmd.class, BackupCmd.class},
     synopsisSubcommandLabel = "COMMAND")
 public final class CctCli implements Runnable {
 

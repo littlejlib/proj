@@ -52,6 +52,16 @@
             <version>${arcadedb.version}</version>
         </dependency>
 
+        <!-- ArcadeDB own consistent backup and restore. The engine carries the SQL BACKUP DATABASE
+             statement, but it only reflects into this artifact, so without it the command parses,
+             runs and fails at the last step. The restore half matters more: shipping it inside the
+             jar means the machine already holds the tool on the day it is needed. -->
+        <dependency>
+            <groupId>com.arcadedb</groupId>
+            <artifactId>arcadedb-integration</artifactId>
+            <version>${arcadedb.version}</version>
+        </dependency>
+
         <!-- @ArcadeData: DTO generation plus the typed Query/Upsert API. Replaces the
              initialize_document_schema + document_crud_helper pair. -->
         <dependency>
@@ -249,7 +259,7 @@
                             <filters>
                                 <!-- Keep OUR arcadedb-log.properties, drop the engine copy whose FileHandler
                                      writes ./log/arcadedb.log into the working directory. See the tutorial:
-                                     project-journals/aracde_db_context/arcade-db-working-examples-2026-07-31.md -->
+                                     the ArcadeDB notes in project-journals. -->
                                 <filter>
                                     <artifact>com.arcadedb:arcadedb-engine</artifact>
                                     <excludes>
