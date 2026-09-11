@@ -6,7 +6,7 @@ import com.arcadedb.database.Database;
 import littlejlib.proj.cct.model.*;
 import littlejlib.proj.cct.store.*;
 
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import static datapotter.arcadedbhelper.Query.query;
 import static littlejlib.proj.cct.Num.*;
 
 public final class Indexer {

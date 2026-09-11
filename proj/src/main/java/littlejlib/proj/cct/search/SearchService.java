@@ -6,7 +6,7 @@ import com.arcadedb.database.Database;
 import littlejlib.proj.cct.model.*;
 import littlejlib.proj.cct.store.Layer;
 
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import static datapotter.arcadedbhelper.Query.query;
 import static littlejlib.proj.cct.Num.*;
 import static littlejlib.proj.cct.model.SessionDoc_A.$sessionId;
 import static littlejlib.proj.cct.model.TurnDoc_A.*;

@@ -9,8 +9,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static littlejlib.proj.model.ProjectRecord_A.*;
-import static xyz.jphil.arcadedb.datahelper.Query.query;
-import static xyz.jphil.arcadedb.datahelper.Upsert.upsert;
+import static datapotter.arcadedbhelper.Query.query;
+import static datapotter.arcadedbhelper.Upsert.upsert;
 
 /**
  * Reads and writes {@link ProjectRecord} rows.
@@ -55,7 +55,7 @@ public class ProjectStore {
      * openCount and lastOpened, which a whole-object upsert would reset to zero on every rescan,
      * quietly destroying the only ranking signal that reflects what you actually use.
      */
-    static final xyz.jphil.datahelper.Field_I<ProjectRecord, ?>[] SCANNED = new xyz.jphil.datahelper.Field_I[]{
+    static final datapotter.datahelper.Field_I<ProjectRecord, ?>[] SCANNED = new datapotter.datahelper.Field_I[]{
             $path, $parentPath, $codeDir, $name, $relativePath, $depth,
             $maven, $gradle, $jbang, $git,
             $groupId, $artifactId, $version, $packaging, $description,

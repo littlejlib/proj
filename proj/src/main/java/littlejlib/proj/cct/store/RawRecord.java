@@ -1,6 +1,6 @@
 package littlejlib.proj.cct.store;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 @Data
 public final class RawRecord extends RawRecord_A {

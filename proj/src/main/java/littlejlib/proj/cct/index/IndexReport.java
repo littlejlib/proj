@@ -1,6 +1,6 @@
 package littlejlib.proj.cct.index;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 import static littlejlib.proj.cct.Num.*;
 

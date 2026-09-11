@@ -1,6 +1,6 @@
 package littlejlib.proj.cct.model;
 
-import xyz.jphil.arcadedb.datahelper.*;
+import datapotter.arcadedbhelper.*;
 
 @ArcadeData
 public final class HistoryDoc extends HistoryDoc_A {

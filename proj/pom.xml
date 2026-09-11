@@ -16,8 +16,8 @@
         <main.class>littlejlib.proj.Main</main.class>
         <exec.mainClass>${main.class}</exec.mainClass>
         <arcadedb.version>26.7.3</arcadedb.version>
-        <datahelper.version>1.4</datahelper.version>
-        <datahelper.processor.version>1.0</datahelper.processor.version>
+        <datahelper.version>1.7</datahelper.version>
+        <datahelper.processor.version>1.3</datahelper.processor.version>
         <jackson.version>2.18.2</jackson.version>
         <!-- ArcadeDB 26.x calls com.google.gson.Strictness, absent before Gson 2.11.
              An older Gson resolves fine and then kills the DB at startup. -->
@@ -65,8 +65,8 @@
         <!-- @ArcadeData: DTO generation plus the typed Query/Upsert API. Replaces the
              initialize_document_schema + document_crud_helper pair. -->
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-arcadedb-datahelper</artifactId>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-arcadedbhelper</artifactId>
             <version>${datahelper.version}</version>
         </dependency>
 
@@ -182,14 +182,14 @@
 
         <!-- Plain @Data (no database attached), which the transcripts settings DTO uses. -->
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-datahelper-annotations</artifactId>
-            <version>1.0</version>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-datahelper-annotations</artifactId>
+            <version>1.1</version>
         </dependency>
         <dependency>
-            <groupId>io.github.xyz-jphil</groupId>
-            <artifactId>xyz-jphil-datahelper-base</artifactId>
-            <version>1.0</version>
+            <groupId>io.github.datapotter</groupId>
+            <artifactId>datapotter-datahelper-base</artifactId>
+            <version>1.3</version>
         </dependency>
 
         <!-- The global summon key needs NO dependency. It was briefly jnativehook, as uskoag-gdrive
@@ -221,13 +221,13 @@
                             <version>1.18.38</version>
                         </path>
                         <path>
-                            <groupId>io.github.xyz-jphil</groupId>
-                            <artifactId>xyz-jphil-datahelper-processor</artifactId>
+                            <groupId>io.github.datapotter</groupId>
+                            <artifactId>datapotter-datahelper-processor</artifactId>
                             <version>${datahelper.processor.version}</version>
                         </path>
                         <path>
-                            <groupId>io.github.xyz-jphil</groupId>
-                            <artifactId>xyz-jphil-arcadedb-datahelper-processor</artifactId>
+                            <groupId>io.github.datapotter</groupId>
+                            <artifactId>datapotter-arcadedbhelper-processor</artifactId>
                             <version>${datahelper.processor.version}</version>
                         </path>
                     </annotationProcessorPaths>

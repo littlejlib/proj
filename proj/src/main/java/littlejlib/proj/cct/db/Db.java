@@ -5,7 +5,7 @@ import module java.base;
 import com.arcadedb.database.Database;
 import littlejlib.proj.cct.model.*;
 import littlejlib.proj.cct.store.StorePaths;
-import xyz.jphil.arcadedb.datahelper.InitDoc;
+import datapotter.arcadedbhelper.InitDoc;
 
 /**
  * The transcript index, hosted as a second database inside the ArcadeDB server proj already runs.

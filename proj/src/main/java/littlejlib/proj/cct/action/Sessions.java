@@ -5,7 +5,7 @@ import module java.base;
 import com.arcadedb.database.Database;
 import littlejlib.proj.cct.model.SessionDoc;
 
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import static datapotter.arcadedbhelper.Query.query;
 import static littlejlib.proj.cct.model.SessionDoc_A.$sessionId;
 
 public final class Sessions {

@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static littlejlib.proj.model.CentralArtifact_A.$coords;
-import static xyz.jphil.arcadedb.datahelper.Query.query;
+import static datapotter.arcadedbhelper.Query.query;
 
 /**
  * Answers "is this on Maven Central" lazily, off the UI thread, and remembers the answer.

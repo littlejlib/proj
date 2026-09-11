@@ -1,6 +1,6 @@
 package littlejlib.proj.cct.index;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 @Data
 public final class IndexOptions extends IndexOptions_A {

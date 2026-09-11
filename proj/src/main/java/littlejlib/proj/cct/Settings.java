@@ -1,6 +1,6 @@
 package littlejlib.proj.cct;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 @Data
 public final class Settings extends Settings_A {

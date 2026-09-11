@@ -1,6 +1,6 @@
 package littlejlib.proj.cct.search;
 
-import xyz.jphil.datahelper.Data;
+import datapotter.datahelper.Data;
 
 @Data
 public final class SearchQuery extends SearchQuery_A {

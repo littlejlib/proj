@@ -1,7 +1,7 @@
 package littlejlib.proj.model;
 
-import xyz.jphil.arcadedb.datahelper.ArcadeData;
-import xyz.jphil.arcadedb.datahelper.TypeDef;
+import datapotter.arcadedbhelper.ArcadeData;
+import datapotter.arcadedbhelper.TypeDef;
 
 /**
  * One {@code <dependency>} of one project, flat, one row.

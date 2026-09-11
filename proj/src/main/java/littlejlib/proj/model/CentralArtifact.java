@@ -1,7 +1,7 @@
 package littlejlib.proj.model;
 
-import xyz.jphil.arcadedb.datahelper.ArcadeData;
-import xyz.jphil.arcadedb.datahelper.TypeDef;
+import datapotter.arcadedbhelper.ArcadeData;
+import datapotter.arcadedbhelper.TypeDef;
 
 /**
  * Whether one set of maven coordinates exists on Maven Central.

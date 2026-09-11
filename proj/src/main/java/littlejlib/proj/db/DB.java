@@ -8,7 +8,7 @@ import com.arcadedb.server.ArcadeDBServer;
 import littlejlib.proj.model.CentralArtifact;
 import littlejlib.proj.model.ProjectDependency;
 import littlejlib.proj.model.ProjectRecord;
-import xyz.jphil.arcadedb.datahelper.InitDoc;
+import datapotter.arcadedbhelper.InitDoc;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
