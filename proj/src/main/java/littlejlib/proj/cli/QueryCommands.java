@@ -52,6 +52,8 @@ public final class QueryCommands {
         root.addSubcommand("where", new WhereCmd(out, err));
         root.addSubcommand("impact", new ImpactCmd(out, err));
         root.addSubcommand("blocked", new BlockedCmd(out));
+        root.addSubcommand("ws", new WsCli());
+        root.addSubcommand("prp-session", new PrpSessionCmd(out, err));
         root.addSubcommand("cct", new littlejlib.proj.cct.cli.CctCli());
         root.setOut(out);
         root.setErr(err);

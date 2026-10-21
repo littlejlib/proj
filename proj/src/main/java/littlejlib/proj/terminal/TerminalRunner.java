@@ -11,8 +11,18 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Opens a terminal somewhere, or opens one and runs something in it.
+ * THE one place that opens a terminal, or runs a command in one. Everything that starts an agent, a
+ * resume, or a shell goes through here; nothing else in this code base may grow its own.
  * <p>
+ * WHERE THE COMMAND RUNS, best first. The order is a preference, not a capability list - each step
+ * is tried and the next is a fallback:
+ * <ol>
+ *   <li>THE TERMINAL THAT ASKED, when this process has a console - {@link ConsoleInput}. No new tab,
+ *       no plugin, no terminal-specific anything, and the agent ends up a direct child of the shell.
+ *   <li>A NEW TABBY TAB - {@link TabbyLaunch}, because Tabby's command line cannot run a command and
+ *       has to be opened and then typed into.
+ *   <li>A NEW TAB ANYWHERE ELSE - the terminal's own run template, pointed at a generated script.
+ * </ol>
  * WHICH TERMINAL: whatever settings name as the default, else the first terminal configured by hand,
  * else the best one detected, else the OS fallback. A configured entry always beats a detected one,
  * because the only reason to configure one is that the detection got it wrong.
@@ -32,6 +42,10 @@ public final class TerminalRunner {
 
     /** The terminal that will actually be used, never null. */
     public static TerminalLauncher resolve(Settings settings) {
+        return TerminalDetector.corrected(pick(settings));
+    }
+
+    static TerminalLauncher pick(Settings settings) {
         if (settings != null) {
             var configured = settings.getTerminalLaunchers().stream()
                     .filter(TerminalLauncher::isUsable).toList();
@@ -67,6 +81,7 @@ public final class TerminalRunner {
 
         if (settings != null) {
             var configured = settings.getTerminalLaunchers().stream()
+                    .map(TerminalDetector::corrected)
                     .filter(TerminalLauncher::isUsable).filter(TerminalLauncher::canRun).findFirst();
             if (configured.isPresent()) return configured.get();
         }
@@ -84,6 +99,7 @@ public final class TerminalRunner {
 
     /** The same, in a terminal the caller has already chosen. */
     public static boolean openIn(TerminalLauncher terminal, Path directory) {
+        terminal = TerminalDetector.corrected(terminal);
         if (terminal == null || !terminal.isUsable()) return false;
         return Cmd.run(Cmd.parse(terminal.getOpenCommand()
                 .replace(Cmd.PATH_PLACEHOLDER, directory.toAbsolutePath().toString())), null);
@@ -110,11 +126,50 @@ public final class TerminalRunner {
 
     public static boolean runIn(TerminalLauncher terminal, Path directory, String command,
                                 String label, Settings settings, String title) {
+        return outcomeOf(terminal, directory, command, label, settings, title).opened();
+    }
+
+    /**
+     * The same, saying which of the three things happened. A launch that only opened a shell is not
+     * a launch that started the agent, and a caller reporting it as one is lying to the user.
+     */
+    public static RunOutcome outcomeOf(TerminalLauncher terminal, Path directory, String command,
+                                       String label, Settings settings, String title) {
+        return outcomeOf(terminal, directory, command, label, settings, title, false);
+    }
+
+    /**
+     * @param forceNewTerminal open a tab even when this process has a terminal of its own to use.
+     *                         Every launch from the picker, the tray or the daemon HAS no console, so
+     *                         they need not pass it; this is for a person who typed the command in
+     *                         one shell and wants the work somewhere else.
+     */
+    public static RunOutcome outcomeOf(TerminalLauncher terminal, Path directory, String command,
+                                       String label, Settings settings, String title,
+                                       boolean forceNewTerminal) {
+        // HERE, if there is a here. Cheapest, needs nothing installed, and the only arrangement in
+        // which the agent gets the console to itself - see ConsoleInput for why that matters.
+        if (startsHere(forceNewTerminal) && queueHere(directory, command)) {
+            return RunOutcome.QUEUED;
+        }
+
+        terminal = TerminalDetector.corrected(terminal);
         if (terminal == null || !terminal.canRun()) terminal = runner(settings);
         if (terminal == null) {
             System.err.println("[TerminalRunner] no terminal here can run a command; "
                     + "set a run template in Settings");
-            return false;
+            return RunOutcome.FAILED;
+        }
+
+        // Tabby cannot be told to run anything from a command line, so it is opened and then typed
+        // into. The title is left to the command itself - `claude --name` outlives any title we set.
+        if (TabbyLaunch.handles(terminal)) {
+            var outcome = TabbyLaunch.run(terminal, directory, command);
+            if (outcome == RunOutcome.OPENED_ONLY) {
+                littlejlib.proj.Clipboard.copy(command);
+                System.err.println("[TerminalRunner] " + outcome.note());
+            }
+            return outcome;
         }
 
         Path script;
@@ -122,13 +177,51 @@ public final class TerminalRunner {
             script = writeScript(directory, command, label, title);
         } catch (IOException e) {
             System.err.println("[TerminalRunner] could not write the launch script: " + e.getMessage());
-            return false;
+            return RunOutcome.FAILED;
         }
 
         var filled = terminal.getRunCommand()
                 .replace("%SCRIPT%", script.toAbsolutePath().toString())
                 .replace(Cmd.PATH_PLACEHOLDER, directory.toAbsolutePath().toString());
-        return Cmd.run(Cmd.parse(filled), null);
+        return Cmd.run(Cmd.parse(filled), null) ? RunOutcome.RAN : RunOutcome.FAILED;
+    }
+
+    /**
+     * Whether a run would use the caller's own terminal rather than opening one. Public so a dry run
+     * can say which it will be without a second copy of the rule.
+     */
+    public static boolean startsHere(boolean forceNewTerminal) {
+        return !forceNewTerminal && ConsoleInput.available();
+    }
+
+    /**
+     * Hands the waiting shell the command itself. No script, and no temporary file.
+     * <p>
+     * A script was written here for one round, to work around a queued command line arriving with
+     * its first 24 characters missing. That had a cause - our own JLine input pump was draining the
+     * console queue - and with that library gone the workaround is just
+     * a file nobody needs. Measured after the fix: 60 to 300 characters, intact.
+     * <p>
+     * Handing over the command rather than a path also leaves the real thing in the shell's history
+     * and scrollback, which is what someone reading the tab back wants to see.
+     */
+    static boolean queueHere(Path directory, String command) {
+        return ConsoleInput.type(inDirectory(directory, command));
+    }
+
+    /**
+     * The command, prefixed with a change of directory only when the shell is not already there.
+     * <p>
+     * Usually it is - {@code proj prp agent 32} is typed inside the project - and a line the user is
+     * about to watch run should not carry a {@code cd} to where they already are.
+     */
+    static String inDirectory(Path directory, String command) {
+        if (directory == null) return command;
+        var target = directory.toAbsolutePath().normalize();
+        var here = Path.of(System.getProperty("user.dir", ".")).toAbsolutePath().normalize();
+        if (here.equals(target)) return command;
+        return WINDOWS ? "cd /d \"" + target + "\" && " + command
+                : "cd \"" + target + "\" && " + command;
     }
 
     /**
@@ -162,7 +255,9 @@ public final class TerminalRunner {
                     + "cd /d \"" + target + "\"\r\n"
                     + command + "\r\n");
         } else {
+            // ~/.local/bin first: a plain sh script never reads .zshrc, and that is where claude is installed
             Files.writeString(file, "#!/bin/sh\n"
+                    + "export PATH=\"$HOME/.local/bin:$PATH\"\n"
                     + (blank(title) ? "" : "printf '\\033]0;" + oneLine(title) + "\\007'\n")
                     + "cd \"" + target + "\" || exit 1\n"
                     + command + "\n");
@@ -215,7 +310,8 @@ public final class TerminalRunner {
         var claimed = new java.util.HashSet<String>();
 
         if (settings != null) {
-            for (var t : settings.getTerminalLaunchers()) {
+            for (var configured : settings.getTerminalLaunchers()) {
+                var t = TerminalDetector.corrected(configured);
                 if (!t.isUsable()) continue;
                 out.add(t);
                 claimed.add(name(t));

@@ -55,7 +55,13 @@ public class ProjectWatcher {
             return;
         }
         running = true;
-        for (var cd : codeDirs) register(cd, cd, 0);
+        for (var cd : codeDirs) {
+            var t0 = littlejlib.proj.util.Boot.ms();
+            register(cd, cd, 0);
+            System.out.println("[ProjectWatcher] registered " + watched.size() + " directories so far, "
+                    + cd + " took " + (littlejlib.proj.util.Boot.ms() - t0) + "ms");
+            System.out.flush();
+        }
 
         thread = new Thread(this::loop, "ProjectWatcher");
         thread.setDaemon(true);

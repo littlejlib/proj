@@ -44,6 +44,7 @@ public class SmokePrompt {
                     + "  logs=" + sessions.size()
                     + (sessions.isEmpty() ? "" : " (latest " + sessions.get(sessions.size() - 1).index() + ")")
                     + "  next export -> " + PrpLogs.nextName(e.getPrpDir(), e.getIndex()));
+            System.out.println("    tab      " + PrpPrompt.tabName(e.getMainFile()));
             System.out.println("    prompt   " + PrpPrompt.of(e.getMainFile(), settings));
             System.out.println("    command  " + PrpPrompt.command(e.getMainFile(), settings));
         }

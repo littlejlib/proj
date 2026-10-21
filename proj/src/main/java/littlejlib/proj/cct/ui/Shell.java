@@ -19,15 +19,18 @@ public final class Shell {
         return run(new ProcessBuilder("explorer.exe", normalize(dir)));
     }
 
+    /**
+     * With no template configured this delegates to proj's own terminal handling rather than
+     * spawning a Command Prompt of its own - there is one place that knows which terminal the user
+     * wants, and a second hardcoded {@code cmd.exe /k cd /d} here was how it got out of step.
+     */
     public static boolean terminal(String dir, String command) {
         var d = normalize(dir);
         if (d == null) return false;
-        var cmd = command == null || command.isBlank() ? defaultTerminal() : command;
-        return run(new ProcessBuilder(split(cmd.replace("{dir}", d))).directory(new File(d)));
-    }
-
-    private static String defaultTerminal() {
-        return "cmd.exe /c start \"\" cmd.exe /k cd /d \"{dir}\"";
+        if (command == null || command.isBlank()) {
+            return littlejlib.proj.terminal.TerminalRunner.open(Path.of(d), null);
+        }
+        return run(new ProcessBuilder(split(command.replace("{dir}", d))).directory(new File(d)));
     }
 
     private static List<String> split(String cmd) {

@@ -88,7 +88,12 @@ public class PrpPanelCell extends TreeCell<PrpNode> {
         // together, so a sixty-character PRP name ellipsised the status badge and the date down to
         // a pair of dots - trading away two short, fixed, entirely legible facts to save four
         // characters of a name that was going to be truncated either way.
-        for (var fixed : new Label[]{status, subCount, when}) fixed.setMinWidth(Region.USE_PREF_SIZE);
+        // The project column is in this list because it carries the TICKET, which is the row's
+        // identifier: squeezed to "pr..." it identifies nothing, and a name that was going to be
+        // truncated anyway is the right thing to spend the pixels on instead.
+        for (var fixed : new Label[]{project, status, subCount, when}) {
+            fixed.setMinWidth(Region.USE_PREF_SIZE);
+        }
         line.getChildren().addAll(project, index, name, status, subCount, when);
 
         // Without this the cell asks for the width of its widest row and the panel scrolls sideways.
@@ -157,12 +162,17 @@ public class PrpPanelCell extends TreeCell<PrpNode> {
     }
 
     void paintRoot(PrpNode node) {
-        project.setText(node.prp.getProjectName());
+        // ONE identifier, not two. Across projects a bare 32 says nothing, so the row leads with the
+        // ticket - proj-32 - and the separate project column would then be saying it twice. Within
+        // one project the key is the same on every row, so there the number alone is the answer and
+        // the panel's own title says which project it belongs to.
+        var ticketed = showProjectName && node.ticket != null;
+        project.setText(ticketed ? node.ticket : node.prp.getProjectName());
         project.setVisible(showProjectName);
         project.setManaged(showProjectName);
         index.setText(node.prp.getIndex());
-        index.setVisible(true);
-        index.setManaged(true);
+        index.setVisible(!ticketed);
+        index.setManaged(!ticketed);
         name.setText(node.prp.getName());
         name.setStyle("-fx-font-size: 12; -fx-font-weight: bold;");
 

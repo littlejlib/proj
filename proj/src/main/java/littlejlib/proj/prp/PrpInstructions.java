@@ -28,13 +28,25 @@ public final class PrpInstructions {
 
     private PrpInstructions() { }
 
-    public record Found(List<TranscriptEntry> entries, Path session, long from, long to) { }
+    public record Found(List<TranscriptEntry> entries, Path session, long from, long to, int skippedMachine) { }
+
+    static final List<String> MACHINE_PREFIXES = List.of(
+        "<cross-session-message", "<system-reminder", "[system notification",
+        "<task-notification", "<command-name>");
+
+    /** A turn claude-code shows as the user's but a peer session or the harness wrote. */
+    static boolean isMachineTurn(String text) {
+        if (text == null) return false;
+        var t = text.strip().toLowerCase(Locale.ROOT);
+        return MACHINE_PREFIXES.stream().anyMatch(t::startsWith);
+    }
 
     /** A prompt that is only an attachment or only a slash command is not an instruction. */
     static boolean isInstruction(String text) {
         if (text == null) return false;
         var t = text.strip();
         if (t.isEmpty()) return false;
+        if (isMachineTurn(t)) return false;
         if (t.startsWith("/")) return false;
         // "@prp/29-prp-name.md @prp/29-prp.status.md read 10% of …" - the opener, not an instruction.
         var withoutAttachments = t.replaceAll("@[A-Za-z0-9_./\\\\-]+", " ").strip();
@@ -55,14 +67,16 @@ public final class PrpInstructions {
         var out = new ArrayList<TranscriptEntry>();
         var from = 0L;
         var to = 0L;
+        var skipped = 0;
         for (var e : all) {
             if (e.timestamp() > 0) {
                 if (from == 0 || e.timestamp() < from) from = e.timestamp();
                 if (e.timestamp() > to) to = e.timestamp();
             }
-            if (e.isUser() && isInstruction(e.body())) out.add(e);
+            if (e.isUser() && isMachineTurn(e.body())) skipped++;
+            else if (e.isUser() && isInstruction(e.body())) out.add(e);
         }
-        return new Found(out, session, from, to);
+        return new Found(out, session, from, to, skipped);
     }
 
     /** Drops the ones whose text is already somewhere in the PRP, however the user pasted it. */

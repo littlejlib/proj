@@ -101,10 +101,17 @@ public final class PrpLogExport {
         }
     }
 
+    static String keyOf(Path project) {
+        var stored = PrpSessions.key(project);
+        return stored != null ? stored : TabName.shortenProject(project);
+    }
+
     static LogHeading heading(PrpEntry entry, Path prpDir, String name, Path cwd) {
         var project = prpDir.getParent() == null ? cwd : prpDir.getParent();
         var serial = name.replaceAll(".*\\.99\\.(\\d+)\\.logs\\.(txt|md)", "$1") + " of PRP " + entry.getIndex();
         var lines = new ArrayList<String>();
+        // The ticket, so a log can be found by the same string the tab and the picker show.
+        lines.add("ticket     " + TabName.ticket(keyOf(project), entry.getIndex()));
         lines.add("prp        " + PrpPrompt.relative(project, entry.getMainFile()));
         if (entry.getStatusFile() != null && Files.exists(entry.getStatusFile()))
             lines.add("status     " + PrpPrompt.relative(project, entry.getStatusFile()));

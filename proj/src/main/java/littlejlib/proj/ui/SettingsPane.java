@@ -40,7 +40,7 @@ public final class SettingsPane {
     final javafx.collections.ObservableList<CodeRepoBase> bases;
     final javafx.collections.ObservableList<IdeLauncher> ides;
     final javafx.collections.ObservableList<TerminalLauncher> terminals;
-    final Spinner<Integer> depth, logsTail;
+    final Spinner<Integer> depth, logsTail, workspaceRefresh;
     final TextField editor, prpTemplate, agentCommand;
     final CheckBox skipPermissions = new CheckBox("Run the agent with no permission prompts");
     final ComboBox<String> defaultTerminal = new ComboBox<>();
@@ -67,6 +67,11 @@ public final class SettingsPane {
         depth = new Spinner<>(1, 12, settings.getProjectScanningDepth());
         depth.setEditable(true);
         depth.setPrefWidth(90);
+
+        // 0 is a real value here - it switches the clock off - so the range starts there.
+        workspaceRefresh = new Spinner<>(0, 1440, settings.getWorkspaceRefreshMinutes());
+        workspaceRefresh.setEditable(true);
+        workspaceRefresh.setPrefWidth(90);
 
         editor = new TextField(nz(settings.getSingleFileEditor()));
         editor.setPromptText("Editor for single files - leave blank to use whatever is installed");
@@ -168,6 +173,7 @@ public final class SettingsPane {
         settings.setSingleFileEditor(editor.getText());
         settings.setPrpTemplateSrc(prpTemplate.getText());
         settings.setProjectScanningDepth(depth.getValue());
+        settings.setWorkspaceRefreshMinutes(workspaceRefresh.getValue());
         settings.setGlobalHotkey(nz(summonKey.getValue()).isBlank()
                 ? littlejlib.proj.util.GlobalHotkey.DEFAULT : summonKey.getValue().trim());
 
@@ -475,6 +481,22 @@ public final class SettingsPane {
         note.setWrapText(true);
         note.setStyle("-fx-font-size: 11px; -fx-text-fill: #555;");
         box.getChildren().add(note);
+
+        box.getChildren().add(new Separator());
+        var refreshRow = new HBox(8, new Label("Re-walk the non-code groups every"), workspaceRefresh,
+                new Label("minutes"));
+        refreshRow.setAlignment(Pos.CENTER_LEFT);
+        box.getChildren().add(refreshRow);
+        var refreshNote = new Label("Code bases are watched for changes as they happen. The bases of "
+                + "a plain group are usually a network drive - Google Drive's virtual filesystem - "
+                + "where there is nothing to watch, so they are re-walked on a clock instead. "
+                + "0 turns that off and leaves the Refresh button and F12 on the tab. Under "
+                + littlejlib.proj.workspace.WorkspaceRefresh.MIN_MINUTES + " is read as "
+                + littlejlib.proj.workspace.WorkspaceRefresh.MIN_MINUTES
+                + "; the daemon picks up a change here on its own, with no restart.");
+        refreshNote.setWrapText(true);
+        refreshNote.setStyle("-fx-font-size: 11px; -fx-text-fill: #555;");
+        box.getChildren().add(refreshNote);
         return box;
     }
 

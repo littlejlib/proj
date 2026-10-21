@@ -33,7 +33,11 @@ public enum PrpAction {
             "Rename between NN-prp-name.md and NN-prp-name.closed.md", Palette.PINK),
     AGENT("Agent", "Start coding agent", "🚀", Palette.LEAF, 8,
             "Open a terminal at the PROJECT root - not the prp folder - running the coding agent "
-                    + "on this PRP", Palette.BLUE);
+                    + "on this PRP", Palette.BLUE),
+    RESUME("Resume", "Resume conversation", "↩", Palette.LEAF, 9,
+            "Reopen the last claude-code conversation this PRP had, in the same tab name. Only "
+                    + "sessions proj started are known; for the rest, the Transcripts tab",
+            Palette.TEAL);
 
     public final String label, full, icon, iconColor, tooltip, style;
     public final int fKey;
@@ -81,7 +85,7 @@ public enum PrpAction {
         if (node.missing) return this == STATUS || this == FOLDER;
         return switch (this) {
             case OPEN, COPY_PATH, COPY_CLAUDE, FOLDER -> true;
-            case STATUS, TOGGLE, AGENT -> node.root;
+            case STATUS, TOGGLE, AGENT, RESUME -> node.root;
         };
     }
 }

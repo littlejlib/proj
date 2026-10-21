@@ -84,18 +84,21 @@ public class SmokePicker {
         });
         shootTab(picker, root, picker.tabs.settings, out, "settings");
 
-        // Selecting the global tab starts a scan of every code base on a background thread. Waited
-        // for HERE and not on the FX thread, which is the thread that has to deliver the result.
+        // Each group contributes two tabs; groups.get(1) is the code group.s PRPs. Selecting it starts
+        // a scan of every code base on a background thread - waited for HERE and not on the FX
+        // thread, which is the thread that has to deliver the result.
+
+        var codePrps = picker.tabs.groups.get(1);
         onFx(() -> {
-            picker.tabs.select(picker.tabs.global);
+            picker.tabs.select(codePrps.tab);
             return null;
         });
-        for (var waited = 0; waited < 240 && onFx(() -> picker.tabs.globalPanel.entries.isEmpty()); waited++) {
+        for (var waited = 0; waited < 240 && onFx(() -> codePrps.prpPanel.entries.isEmpty()); waited++) {
             Thread.sleep(250);
         }
-        System.out.println("global entries: " + onFx(() -> picker.tabs.globalPanel.entries.size())
-                + " of " + onFx(() -> picker.tabs.globalPanel.globalTotal) + " found");
-        shootTab(picker, root, picker.tabs.global, out, "global");
+        System.out.println("code group PRP entries: " + onFx(() -> codePrps.prpPanel.entries.size())
+                + " of " + onFx(() -> codePrps.prpPanel.globalTotal) + " found");
+        shootTab(picker, root, codePrps.tab, out, "group-prps");
 
         Platform.exit();
         System.exit(0);

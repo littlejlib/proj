@@ -142,6 +142,7 @@ public final class PrpPanel {
         for (var a : PrpAction.values()) {
             pane.getChildren().add(Chip.of(a.legendText(), a.style, a.icon, a.iconColor));
         }
+        pane.getChildren().add(Chip.of("Alt+K project key", Palette.GREY));
         pane.getChildren().add(Chip.of("F12 refresh", Palette.GREY));
         if (onClose != null) pane.getChildren().add(Chip.of("Esc close panel", Palette.GREY));
         return pane;
@@ -160,6 +161,7 @@ public final class PrpPanel {
     }
 
     public void reload() {
+        tickets.clear();
         if (global) loadGlobal();
         else if (projectDir != null) load(projectDir);
     }
@@ -176,8 +178,17 @@ public final class PrpPanel {
      *               lands after a newer request
      */
     public void showGlobal(java.util.concurrent.Callable<List<GlobalPrpEntry>> source) {
+        showGlobal(source, "every project");
+    }
+
+    /**
+     * @param scope what this list is OF. Named by the caller because the list is no longer global:
+     *              it holds one group's PRPs and never another's, and a panel that says "every
+     *              project" over a list of court cases is telling the reader something untrue.
+     */
+    public void showGlobal(java.util.concurrent.Callable<List<GlobalPrpEntry>> source, String scope) {
         globalSource = source;
-        title.setText("Recent PRPs - every project");
+        title.setText("Recent PRPs - " + scope);
         loadGlobal();
     }
 
@@ -269,8 +280,10 @@ public final class PrpPanel {
         }
     }
 
+    final PrpTickets tickets = new PrpTickets();
+
     TreeItem<PrpNode> itemFor(GlobalPrpEntry e) {
-        var item = new TreeItem<>(PrpNode.of(e));
+        var item = new TreeItem<>(PrpNode.of(e, tickets.of(e)));
         item.getChildren().add(new TreeItem<>(PrpNode.file(e, e.getMainFile())));
         item.getChildren().add(new TreeItem<>(e.getPrpEntry().hasStatusFile()
                 ? PrpNode.file(e, e.getPrpEntry().getStatusFile()) : PrpNode.missingStatus(e)));
@@ -314,7 +327,14 @@ public final class PrpPanel {
         // THE ARROW THAT POINTS OUT OF THIS PANE LEAVES IT. This panel is the right-hand one, so
         // Left goes back to the projects; Right is left alone and still expands a tree node, which
         // is the mirror image of the rule on the other side. See ProjectPickerDialog.onArrowKey.
-        if (code == KeyCode.LEFT && onExitLeft != null) { onExitLeft.run(); e.consume(); return; }
+        // Not from the filter box: Left there is moving the caret through what is being typed, and a
+        // caret that jumps to another pane mid-word would be unusable. The mirror of the guard the
+        // projects table already puts on Right - it was simply missing on this side.
+        if (code == KeyCode.LEFT && tree.isFocused() && onExitLeft != null) {
+            onExitLeft.run();
+            e.consume();
+            return;
+        }
 
         if (code == KeyCode.DOWN && search.isFocused()) { focusTree(); e.consume(); return; }
         // Up off the top of the list returns to the filter, the same way it does in the projects

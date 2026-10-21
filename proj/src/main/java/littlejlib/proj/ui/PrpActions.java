@@ -63,7 +63,33 @@ public final class PrpActions {
                 say.accept("toggled " + node.prp.getIndex() + " - refreshing");
             }
             case AGENT -> AgentStarter.start(owner, node.prp.getMainFile(), settings);
+            case RESUME -> resume(node, settings, say);
         }
+    }
+
+    /**
+     * Straight back in, with no dialog: the terminal, the directory and the tab name are all already
+     * decided by the launch this is resuming. Only sessions proj started are here - it knows their
+     * ids because it minted them - so the honest answer for the rest is the Transcripts tab.
+     */
+    static void resume(PrpNode node, Settings settings, Consumer<String> say) {
+        var prpFile = node.prp.getMainFile();
+        var sessions = littlejlib.proj.prp.PrpSessions.of(prpFile);
+        if (sessions.isEmpty()) {
+            say.accept("no conversation recorded for PRP " + node.prp.getIndex()
+                    + " - the Transcripts tab searches the ones proj did not start");
+            return;
+        }
+        var session = sessions.get(0);
+        var plan = littlejlib.proj.prp.PrpResume.plan(prpFile, session, settings, false);
+        var more = sessions.size() > 1 ? "   (" + (sessions.size() - 1) + " older)" : "";
+        say.accept("resuming " + session.tabName() + more + " ...");
+        BackgroundLaunch.run(() -> littlejlib.proj.prp.PrpResume.launch(plan, settings, null),
+                outcome -> say.accept(switch (outcome) {
+                    case RAN, QUEUED -> "resumed " + session.tabName() + more;
+                    case OPENED_ONLY -> outcome.note();
+                    case FAILED -> "could not open a terminal - check Settings";
+                }));
     }
 
     /**

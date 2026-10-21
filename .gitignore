@@ -93,7 +93,7 @@ fileHistory/
 *.symbols.md
 ai-context-guide.md
 .claude
-# CLAUDE.md
+CLAUDE.md
 # active.instructions.md
 # implemented.instructions.md
 # vision.md

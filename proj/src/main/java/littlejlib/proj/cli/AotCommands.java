@@ -4,8 +4,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import littlejlib.proj.LogConfig;
 import littlejlib.proj.StdoutChannel;
-import littlejlib.aot.AotTrainer;
-import littlejlib.aot.AotState;
+import jarrunner.aot.AotTrainer;
+import jarrunner.aot.AotState;
 import littlejlib.proj.aot.AotWarmup;
 
 import java.nio.file.Path;

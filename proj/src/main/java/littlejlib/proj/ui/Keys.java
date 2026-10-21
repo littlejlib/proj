@@ -40,6 +40,11 @@ public final class Keys {
                 && e.isAltDown() && !e.isControlDown() && !e.isMetaDown() && !e.isShiftDown();
     }
 
+    /** DIGIT1..DIGIT9 by number, so a tab strip can bind its keys by counting along itself. */
+    public static KeyCode digit(int n) {
+        return n < 1 || n > 9 ? KeyCode.UNDEFINED : KeyCode.valueOf("DIGIT" + n);
+    }
+
     public static boolean plain(KeyEvent e, KeyCode code) {
         return e.getCode() == code
                 && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown() && !e.isShiftDown();

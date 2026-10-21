@@ -100,7 +100,7 @@ public class ProjectPickerDialog {
     CheckBox mavenOnly, showFolders, includeMirror, includeAuxiliary;
     ChoiceBox<ConcernFilter> showBox;
     ChoiceBox<ProjectSort> sortBox;
-    Button addBaseButton, refreshButton, prpButton, menuButton;
+    Button addBaseButton, refreshButton, prpButton, menuButton, newFolderButton;
     TreeTableView<ProjectRecord> table;
     ContextMenu rowMenu;
     PickerTabs tabs;
@@ -108,6 +108,9 @@ public class ProjectPickerDialog {
     PrpPanel prpPanel;
     PauseTransition prpFollowDebounce;
     javafx.scene.layout.FlowPane legendPane;
+    // Where the tab chips go. They cannot be built with the rest: the legend is inside the node that
+    // is PASSED TO PickerTabs, so the tabs do not exist yet when this pane is assembled.
+    int tabChipAt;
     // Resolved once. Detection walks the disk, and the row menu is opened often enough that doing
     // it per open would be felt. A settings change already asks for the picker to be reopened.
     List<littlejlib.proj.ide.DetectedIde> ides = List.of();
@@ -195,6 +198,11 @@ public class ProjectPickerDialog {
                 "Add a coderepobase - a directory holding many repositories   (Alt+B)"));
         addBaseButton.setOnAction(e -> addCodeRepoBase());
 
+        newFolderButton = new Button("+ Folder");
+        newFolderButton.setTooltip(new Tooltip(
+                "Create an empty folder inside the selected one - the start of a new project   (Alt+N)"));
+        newFolderButton.setOnAction(e -> newFolder());
+
         prpButton = new Button("PRP");
         prpButton.setTooltip(new Tooltip("PRPs of the selected project   (F10)"));
         prpButton.setOnAction(e -> openPrpManager());
@@ -211,7 +219,7 @@ public class ProjectPickerDialog {
                 new Label("Show"), showBox, new Label("Sort"), sortBox);
         var row2 = new HBox(8, mavenOnly, showFolders, includeMirror, includeAuxiliary,
                 new Separator(javafx.geometry.Orientation.VERTICAL),
-                addBaseButton, prpButton, menuButton, refreshButton);
+                addBaseButton, newFolderButton, prpButton, menuButton, refreshButton);
         row1.setAlignment(Pos.CENTER_LEFT);
         row2.setAlignment(Pos.CENTER_LEFT);
 
@@ -262,6 +270,7 @@ public class ProjectPickerDialog {
 
         tabs = new PickerTabs(projects, settings, () -> stage, browsePaths, this::knownProjectDirs,
                 () -> Platform.runLater(searchField::requestFocus), this::activateProject);
+        addTabChips();
         var root = new VBox(tabs.pane);
         VBox.setVgrow(tabs.pane, Priority.ALWAYS);
         Keys.noMnemonics(root);
@@ -536,22 +545,32 @@ public class ProjectPickerDialog {
      * is the same glyph in both places, so the legend can be read once and the buttons recognised
      * by shape from then on.
      */
+    /**
+     * The legend, and the toolbar - see {@link Legend}. Every entry that names an action runs
+     * the SAME method its key does.
+     * <p>
+     * THE TAB ENTRIES ARE GENERATED FROM THE ACTUAL TABS. They were hand-written, and by the
+     * time a second group existed they were lying: the strip had grown to six and the legend
+     * still promised Alt+3 transcripts and Alt+4 settings. A legend built by walking the thing
+     * it describes cannot drift from it.
+     */
     javafx.scene.layout.FlowPane buildLegend() {
         var pane = new javafx.scene.layout.FlowPane(4, 3);
-        pane.getChildren().add(Chip.of("↑↓ move, ↑ at top returns to filter", Palette.GREY));
-        pane.getChildren().add(Chip.of("→ PRPs of this project", Palette.GREY));
+        pane.getChildren().add(Chip.of("up/down move, up at top returns to filter", Palette.GREY));
+        pane.getChildren().add(Chip.of("right = PRPs of this project, left comes back", Palette.GREY));
+        pane.getChildren().add(Chip.of("up from the filter reaches the tabs", Palette.GREY));
         pane.getChildren().add(Chip.of("Enter select", Palette.GREY));
         pane.getChildren().add(Chip.of("a-z filter", Palette.GREY));
         pane.getChildren().add(Chip.of("right-click row for these + open in", Palette.GREY));
         for (var a : ProjectAction.values()) {
-            pane.getChildren().add(Chip.of(a.legendText(), a.style, a.icon, a.iconColor));
+            pane.getChildren().add(Legend.withTip(
+                    Legend.of(a.legendText(), a.style, a.icon, a.iconColor, () -> runAction(a)),
+                    a.tooltip));
         }
-        pane.getChildren().add(Chip.of("F11 menu", Palette.GREY));
-        pane.getChildren().add(Chip.of("F12 refresh", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+1 projects", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+2 recent PRPs", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+3 transcripts", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+4 settings", Palette.GREY));
+        pane.getChildren().add(Legend.of("F11 menu", Palette.GREY, this::openMenu));
+        pane.getChildren().add(Legend.of("F12 refresh", Palette.GREY, this::rescan));
+        tabChipAt = pane.getChildren().size();
+        // The tab chips land here later - see addTabChips.
         pane.getChildren().add(Chip.of("row colour = worked on recently", Palette.GREY));
         // Only when one is actually bound. A legend entry for a gesture the daemon did not install
         // would be teaching a key that silently does nothing, which is worse than not saying.
@@ -560,11 +579,13 @@ public class ProjectPickerDialog {
                     littlejlib.proj.util.GlobalHotkey.describe(settings.getGlobalHotkey())
                             + " summons this window", Palette.GREY));
         }
-        pane.getChildren().add(Chip.of("Alt+M maven", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+F folders", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+G mirror", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+A auxiliary", Palette.GREY));
-        pane.getChildren().add(Chip.of("Alt+B add base", Palette.GREY));
+        pane.getChildren().add(Legend.of("Alt+M maven", Palette.GREY, () -> toggle(mavenOnly, "Maven only")));
+        pane.getChildren().add(Legend.of("Alt+F folders", Palette.GREY, () -> toggle(showFolders, "Plain folders")));
+        pane.getChildren().add(Legend.of("Alt+G mirror", Palette.GREY, () -> toggle(includeMirror, "GitHub mirror")));
+        pane.getChildren().add(Legend.of("Alt+A auxiliary", Palette.GREY, () -> toggle(includeAuxiliary, "Auxiliary")));
+        pane.getChildren().add(Legend.of("Alt+B add base", Palette.GREY, this::addCodeRepoBase));
+        pane.getChildren().add(Legend.of("Alt+N new folder", Palette.GREY, this::newFolder));
+        pane.getChildren().add(Legend.of("Alt+K project key", Palette.GREY, this::editProjectKey));
         pane.getChildren().add(Chip.of("Esc cancel", Palette.GREY));
         return pane;
     }
@@ -588,13 +609,30 @@ public class ProjectPickerDialog {
         if (e.isAltDown()) { onAltKey(e); return; }
         if (e.isControlDown() || e.isMetaDown()) return;
 
+        // THE TAB STRIP IS PART OF EVERY TAB'S ARROW MODEL, so it is handled HERE - before anything
+        // that knows which tab is showing. Wiring it per pane is what made the navigation stop
+        // working the moment you left the projects table: from the PRP search box there was no way
+        // back up, and the transcripts and settings panes had never heard of it at all. A rule that
+        // holds on one tab and not the others is worse than no rule, because it is learned and then
+        // betrayed.
+        if (tabs.stripHasFocus() && tabs.onStripArrow(e)) return;
+        if (Keys.plain(e, KeyCode.UP) && atTopOfPane()) {
+            tabs.focusStrip();
+            e.consume();
+            return;
+        }
+
         // Off the Projects tab the picker's keys mean nothing. The global PRP list is a PrpPanel and
         // the transcripts pane is a whole second keyboard model; each wants its own. Esc anywhere
         // else is the way back to the projects rather than a way to cancel a selection that is not
         // being made - but only when the tab itself did not want it, since Esc backs out of a find
         // bar and a turn list before it backs out of the tab.
-        if (tabs.selected() != tabs.projects) {
-            if (tabs.selected() == tabs.global) tabs.globalPanel.onKey(e);
+        if (!tabs.codeProjectsShowing()) {
+            // The strip owns Left/Right/Down while it holds the focus - the top of the arrow rule.
+            if (tabs.stripHasFocus() && tabs.onStripArrow(e)) return;
+            var group = tabs.selectedGroup();
+            if (group != null && group.prps) group.prpPanel.onKey(e);
+            if (group != null && group.folders != null && group.folders.onKey(e)) return;
             if (tabs.selected() == tabs.transcripts) tabs.transcriptsTab.onKey(e);
             if (!e.isConsumed() && Keys.plain(e, KeyCode.ESCAPE)) {
                 tabs.select(tabs.projects);
@@ -627,7 +665,15 @@ public class ProjectPickerDialog {
         var action = ProjectAction.byKey(code);
         if (action == null) return;
         e.consume();
+        runAction(action);
+    }
 
+    /**
+     * One entry point for an action however it was asked for - the function key, the row menu, or a
+     * click on its legend chip. The legend is a complete list of what this window does, which makes
+     * it a toolbar; having it call this rather than its own copy is what stops the two drifting.
+     */
+    void runAction(ProjectAction action) {
         var rec = selected();
         if (rec == null || rec.isCodeDirNode()) {
             Toast.show("select a project first");
@@ -638,6 +684,20 @@ public class ProjectPickerDialog {
             return;
         }
         onAction(action, rec);
+    }
+
+    /**
+     * Is the focus in a filter box - the top of whichever pane is showing?
+     * <p>
+     * Answered by asking the FOCUS OWNER rather than by naming the fields, so it holds for panes
+     * this class has never heard of: the PRP search, the transcripts search, a settings field, and
+     * whatever comes next. A one-line text field has no use for Up - the caret cannot go anywhere -
+     * so the key is free to mean "leave the pane upward" everywhere in this window at once.
+     */
+    boolean atTopOfPane() {
+        var owner = stage.getScene() == null ? null : stage.getScene().getFocusOwner();
+        return owner instanceof javafx.scene.control.TextField
+                || owner instanceof javafx.scene.control.ComboBox<?>;
     }
 
     /**
@@ -675,6 +735,8 @@ public class ProjectPickerDialog {
                 e.consume();
             }
             case UP -> {
+                // Up out of the filter box is NOT handled here - onGlobalKey owns it for every pane
+                // in the window at once, so that the rule cannot hold on this tab and nowhere else.
                 if (!table.isFocused()) return;
                 if (table.getSelectionModel().getSelectedIndex() > 0) return;
                 searchField.requestFocus();
@@ -693,15 +755,87 @@ public class ProjectPickerDialog {
     void onAltKey(KeyEvent e) {
         // The tabs first, because they work from every tab and the rest do not.
         if (tabs.onAltDigit(e)) return;
+        // Alt+N is the same action on every tab, so a plain group answers it itself.
+        var plain = tabs.selectedGroup();
+        if (plain != null && plain.folders != null && Keys.alt(e, KeyCode.N)) {
+            plain.folders.newFolder();
+            e.consume();
+            return;
+        }
         if (tabs.selected() == tabs.transcripts) { tabs.transcriptsTab.onKey(e); return; }
-        if (tabs.selected() != tabs.projects) return;
+        // Before the code-projects guard: a key belongs to a project, and a PRP tab is showing PRPs
+        // OF a project - which is exactly where the ticket it produces is on screen.
+        if (Keys.alt(e, KeyCode.K)) { editProjectKey(); e.consume(); return; }
+        if (!tabs.codeProjectsShowing()) return;
         if (Keys.alt(e, KeyCode.M)) toggle(mavenOnly, "Maven only");
         else if (Keys.alt(e, KeyCode.F)) toggle(showFolders, "Plain folders");
         else if (Keys.alt(e, KeyCode.G)) toggle(includeMirror, "GitHub mirror");
         else if (Keys.alt(e, KeyCode.A)) toggle(includeAuxiliary, "Auxiliary");
         else if (Keys.alt(e, KeyCode.B)) addCodeRepoBase();
+        else if (Keys.alt(e, KeyCode.N)) newFolder();
         else return;
         e.consume();
+    }
+
+    /**
+     * An empty directory inside the selected one - where a new project starts before it has a pom.
+     * <p>
+     * Alt rather than a function key because F1..F12 are all spoken for in this window, and Alt is
+     * for the infrequent; a folder is created once per project. The same key does the same thing on
+     * the plain tabs, which is the point of not inventing a second one there.
+     */
+    void newFolder() {
+        var rec = selected();
+        var parent = NewFolder.parentFor(rec == null ? null : rec.dir(),
+                browsePaths.isEmpty() ? null : browsePaths.get(0));
+        if (NewFolder.createUnder(parent) != null) rescan();
+    }
+
+    /**
+     * The project whose key Alt+K edits: whatever the visible PRP list has selected, else the
+     * selected project row. A PRP row knows its own project, which is what makes this work on a PRP
+     * tab and in the side panel without asking the user to go and select the project first.
+     */
+    Path projectForKey() {
+        var group = tabs.selectedGroup();
+        if (group == null) return null;                       // transcripts, settings
+
+        // A PRP row knows its own project, which is what lets this work on a PRP tab without
+        // sending the user back to the rows tab to select the project first.
+        if (group.prps) return projectOf(group.prpPanel);
+
+        // A PLAIN group has its own rows and its own PRP side panel. Falling through to the CODE
+        // table from here is what made Alt+K on a legal case rename a maven project on a tab that
+        // was not even showing.
+        if (group.folders != null) {
+            var fromPanel = group.folders.prpOpen() ? projectOf(group.folders.prpPanel) : null;
+            return fromPanel != null ? fromPanel : group.folders.selectedDir();
+        }
+
+        if (prpPanelOpen() && prpPanel.holdsFocus()) {
+            var fromPanel = projectOf(prpPanel);
+            if (fromPanel != null) return fromPanel;
+        }
+        var rec = selected();
+        return rec == null || rec.isCodeDirNode() ? null : rec.dir();
+    }
+
+    static Path projectOf(PrpPanel panel) {
+        var node = panel == null ? null : panel.selected();
+        return node == null ? null : node.prp.getProjectPath();
+    }
+
+    void editProjectKey() {
+        ProjectKeyDialog.show(stage, projectForKey(), this::refreshTickets);
+    }
+
+    /** Every PRP list is showing tickets built from that key, so all of them are now out of date. */
+    void refreshTickets() {
+        if (prpPanelOpen()) prpPanel.reload();
+        for (var g : tabs.groups) {
+            if (g.prpPanel != null) g.prpPanel.reload();
+            if (g.folders != null && g.folders.prpOpen()) g.folders.prpPanel.reload();
+        }
     }
 
     /** The focus deliberately stays where it was - the tick alone is easy to miss, so it is said. */
@@ -1021,6 +1155,25 @@ public class ProjectPickerDialog {
     void activateProject(Path dir) {
         if (dir == null) return;
         var path = dir.toAbsolutePath().toString();
+
+        // WHICH TAB the directory belongs to, before assuming the code one. Roughly half the
+        // sessions on this machine ran in a plain group, and every one of them used to land on
+        // "not in the project index - proj scan would pick it up" - advice that was simply false,
+        // because no code scan was ever going to find a folder outside the code bases.
+        var group = littlejlib.proj.group.Groups.holding(settings, dir);
+        if (group != null && !group.isCode()) {
+            var tab = tabs.groups.stream()
+                    .filter(g -> !g.prps && g.group.slug().equals(group.slug()))
+                    .findFirst().orElse(null);
+            if (tab != null && tab.folders != null) {
+                tabs.select(tab.tab);
+                Platform.runLater(() -> {
+                    if (tab.folders.reselect(path)) Toast.show(dir.getFileName() + " selected");
+                    else Toast.show(dir + " is not indexed yet - F12 on this tab rescans it");
+                });
+                return;
+            }
+        }
         tabs.select(tabs.projects);
         Platform.runLater(() -> {
             if (reselect(path)) {
@@ -1038,6 +1191,24 @@ public class ProjectPickerDialog {
                 }
             });
         });
+    }
+
+    /**
+     * One chip per tab, generated from the tabs themselves and inserted where the legend left room.
+     * <p>
+     * Generated rather than written out, because the hand-written version was already lying by the
+     * time a second group existed: it promised Alt+3 transcripts and Alt+4 settings while the strip
+     * had grown to six. A legend that walks the thing it describes cannot say a key that is not
+     * bound.
+     */
+    void addTabChips() {
+        var all = tabs.pane.getTabs();
+        for (var i = 0; i < all.size() && i < 9; i++) {
+            var tab = all.get(i);
+            legendPane.getChildren().add(Math.min(tabChipAt + i, legendPane.getChildren().size()),
+                    Legend.of("Alt+" + (i + 1) + " " + tab.getText().toLowerCase(),
+                            Palette.GREY, () -> tabs.select(tab)));
+        }
     }
 
     boolean reselect(String path) {

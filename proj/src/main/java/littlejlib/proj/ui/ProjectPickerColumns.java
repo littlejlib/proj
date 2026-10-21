@@ -57,7 +57,7 @@ public final class ProjectPickerColumns {
         var built = new EnumMap<PickerColumn, TreeTableColumn<ProjectRecord, ?>>(PickerColumn.class);
 
         var num = widgets(PickerColumn.NUM, 46);
-        num.setCellFactory(c -> new RowNumberCell());
+        num.setCellFactory(c -> new RowNumberCell<>());
         built.put(PickerColumn.NUM, num);
 
         // The relative path, not just the leaf name: without it, sorted siblings from different

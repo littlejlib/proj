@@ -1,9 +1,6 @@
 package littlejlib.proj.model;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-import lombok.experimental.Accessors;
+import datapotter.datahelper.Data;
 
 /**
  * jacli's view of one project, read through the jacli daemon rather than its ArcadeDB index -
@@ -11,11 +8,8 @@ import lombok.experimental.Accessors;
  * Populated in phase D; a null JacliInfo on a node means "not asked yet", which is a different
  * thing from {@link JacliState#UNINDEXED}, meaning "asked, and jacli does not know it".
  */
-@Getter
-@Setter
-@Accessors(chain = true)
-@ToString
-public class JacliInfo {
+@Data
+public final class JacliInfo extends JacliInfo_A {
 
     JacliState state = JacliState.UNINDEXED;
     String coords = "";

@@ -1,8 +1,5 @@
 package littlejlib.proj;
 
-import org.jline.reader.LineReader;
-import org.jline.terminal.Attributes;
-import org.jline.terminal.Terminal;
 import littlejlib.proj.model.ProjectRecord;
 import littlejlib.proj.scanner.ProjectStore;
 import littlejlib.proj.scanner.ProjectTreeScanner;
@@ -28,15 +25,15 @@ public class ProjectManager {
      * Opens a project using cached projects from application level.
      * Scans only once per application run (on first call).
      */
-    public static void openProject(Terminal terminal, LineReader lineReader, Settings settings,
+    public static void openProject(Settings settings,
                                    AtomicReference<List<String>> appCachedProjects) {
-        terminal.writer().println("\n--- Open Project ---");
-        terminal.writer().flush();
+        System.out.println("\n--- Open Project ---");
+        System.out.flush();
         
         Path codeReposPath = Paths.get(settings.getCodeReposPath());
         if (!Files.exists(codeReposPath) || !Files.isDirectory(codeReposPath)) {
-            terminal.writer().println("Code repositories path does not exist: " + codeReposPath);
-            terminal.writer().flush();
+            System.out.println("Code repositories path does not exist: " + codeReposPath);
+            System.out.flush();
             return;
         }
 
@@ -46,8 +43,8 @@ public class ProjectManager {
         if (currentProjects == null) {
             // Load from DB cache immediately
             if (Main.isVerbose()) {
-                terminal.writer().println("Loading cached projects from database...");
-                terminal.writer().flush();
+                System.out.println("Loading cached projects from database...");
+                System.out.flush();
             }
             List<String> dbCachedProjects = relativePaths(new ProjectStore().load(codeReposPath));
 
@@ -64,17 +61,17 @@ public class ProjectManager {
 
             if (!dbCachedProjects.isEmpty()) {
                 if (Main.isVerbose()) {
-                    terminal.writer().println(String.format("Loaded %d projects from cache", dbCachedProjects.size()));
-                    terminal.writer().println("(Background scan updating database cache...)");
-                    terminal.writer().flush();
+                    System.out.println(String.format("Loaded %d projects from cache", dbCachedProjects.size()));
+                    System.out.println("(Background scan updating database cache...)");
+                    System.out.flush();
                 }
                 // Use cached projects immediately
                 currentProjects = dbCachedProjects;
                 Main.updateCachedProjects(currentProjects);
             } else {
                 if (Main.isVerbose()) {
-                    terminal.writer().println("No cache found, scanning directories...");
-                    terminal.writer().flush();
+                    System.out.println("No cache found, scanning directories...");
+                    System.out.flush();
                 }
                 try {
                     scanThread.join(); // Wait for scan if no cache
@@ -88,20 +85,20 @@ public class ProjectManager {
         } else {
             // Use cached projects from previous call
             if (Main.isVerbose()) {
-                terminal.writer().println("Using cached projects from this session...");
-                terminal.writer().flush();
+                System.out.println("Using cached projects from this session...");
+                System.out.flush();
             }
         }
 
         if (currentProjects.isEmpty()) {
-            terminal.writer().println("No projects found.");
-            terminal.writer().flush();
+            System.out.println("No projects found.");
+            System.out.flush();
             return;
         }
 
         if (Main.isVerbose()) {
-            terminal.writer().println("\nOpening project picker UI...");
-            terminal.writer().flush();
+            System.out.println("\nOpening project picker UI...");
+            System.out.flush();
         }
 
         // Show JavaFX picker dialog
@@ -109,14 +106,14 @@ public class ProjectManager {
         var result = ProjectPickerDialog.show(browsePaths, settings);
 
         if (result == null) {
-            terminal.writer().println("Selection cancelled.");
-            terminal.writer().flush();
+            System.out.println("Selection cancelled.");
+            System.out.flush();
             // Exit cleanly - don't try to return to menu
             System.exit(0);
         }
 
-        terminal.writer().println("Selected: " + result.projectPath());
-        terminal.writer().flush();
+        System.out.println("Selected: " + result.projectPath());
+        System.out.flush();
 
         Path selectedPath = result.absolutePath();
 
@@ -124,19 +121,19 @@ public class ProjectManager {
         if (result.action != ProjectPickerDialog.Action.NONE) {
             // Action already executed in GUI (C/F/E pressed)
             // GUI has already called System.exit(0), but just in case:
-            terminal.writer().println("Action executed in GUI, exiting...");
-            terminal.writer().flush();
+            System.out.println("Action executed in GUI, exiting...");
+            System.out.flush();
             System.exit(0);
         }
 
         // User pressed Enter in GUI - show TUI action menu
-        boolean shouldExit = openProjectOptions(terminal, lineReader, settings, selectedPath);
+        boolean shouldExit = openProjectOptions(settings, selectedPath);
         if (shouldExit) {
             System.exit(0);
         }
     }
 
-    private static List<String> filterProjects(List<String> projects, String searchText, Terminal terminal) {
+    private static List<String> filterProjects(List<String> projects, String searchText) {
         if (searchText.isEmpty()) {
             return projects;
         }
@@ -151,8 +148,8 @@ public class ProjectManager {
             }
         } catch (java.util.regex.PatternSyntaxException e) {
             // If regex is invalid, fall back to simple contains search
-            terminal.writer().println("(Using simple text search - regex pattern invalid)");
-            terminal.writer().flush();
+            System.out.println("(Using simple text search - regex pattern invalid)");
+            System.out.flush();
             String lowerSearch = searchText.toLowerCase();
             for (String project : projects) {
                 if (project.toLowerCase().contains(lowerSearch)) {
@@ -167,13 +164,13 @@ public class ProjectManager {
      * @deprecated Use openProject() instead which merges both configured and all organizations
      */
     @Deprecated
-    public static void openProjectAllOrganizations(Terminal terminal, LineReader lineReader, Settings settings) {
-        terminal.writer().println("\n--- Open Project (All Organizations) ---");
+    public static void openProjectAllOrganizations(Settings settings) {
+        System.out.println("\n--- Open Project (All Organizations) ---");
 
         Path codeReposPath = Paths.get(settings.getCodeReposPath());
         if (!Files.exists(codeReposPath) || !Files.isDirectory(codeReposPath)) {
-            terminal.writer().println("Code repositories path does not exist: " + codeReposPath);
-            terminal.writer().flush();
+            System.out.println("Code repositories path does not exist: " + codeReposPath);
+            System.out.flush();
             return;
         }
 
@@ -181,20 +178,20 @@ public class ProjectManager {
         List<String> allOrganizations = listAllOrganizations(codeReposPath);
 
         if (allOrganizations.isEmpty()) {
-            terminal.writer().println("No organizations found in: " + codeReposPath);
-            terminal.writer().flush();
+            System.out.println("No organizations found in: " + codeReposPath);
+            System.out.flush();
             return;
         }
 
         // Show organization selection
-        terminal.writer().println("\nAll Organizations in " + codeReposPath + ":");
+        System.out.println("\nAll Organizations in " + codeReposPath + ":");
         for (int i = 0; i < allOrganizations.size(); i++) {
-            terminal.writer().println((i + 1) + ". " + allOrganizations.get(i));
+            System.out.println((i + 1) + ". " + allOrganizations.get(i));
         }
-        terminal.writer().println("0. Cancel");
-        terminal.writer().flush();
+        System.out.println("0. Cancel");
+        System.out.flush();
 
-        String choice = lineReader.readLine("Select organization: ").trim();
+        String choice = Prompt.ask("Select organization: ").trim();
         if ("0".equals(choice)) {
             return;
         }
@@ -205,13 +202,13 @@ public class ProjectManager {
             if (index >= 0 && index < allOrganizations.size()) {
                 selectedOrgName = allOrganizations.get(index);
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
                 return;
             }
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
             return;
         }
 
@@ -219,13 +216,13 @@ public class ProjectManager {
         Path orgPath = codeReposPath.resolve(selectedOrgName);
 
         // Ask user for sorting preference
-        terminal.writer().println("\nSort projects by:");
-        terminal.writer().println("1. Alphabetically (A-Z)");
-        terminal.writer().println("2. Recently modified (newest first)");
-        terminal.writer().println("0. Cancel");
-        terminal.writer().flush();
+        System.out.println("\nSort projects by:");
+        System.out.println("1. Alphabetically (A-Z)");
+        System.out.println("2. Recently modified (newest first)");
+        System.out.println("0. Cancel");
+        System.out.flush();
 
-        String sortChoice = lineReader.readLine("Select sorting option: ").trim();
+        String sortChoice = Prompt.ask("Select sorting option: ").trim();
         if ("0".equals(sortChoice)) {
             return;
         }
@@ -234,20 +231,20 @@ public class ProjectManager {
         List<String> projects = listProjects(orgPath, sortByRecency);
 
         if (projects.isEmpty()) {
-            terminal.writer().println("No projects found in organization: " + selectedOrgName);
-            terminal.writer().flush();
+            System.out.println("No projects found in organization: " + selectedOrgName);
+            System.out.flush();
             return;
         }
 
         String sortLabel = sortByRecency ? " (sorted by recency)" : " (sorted alphabetically)";
-        terminal.writer().println("\nProjects in " + selectedOrgName + sortLabel + ":");
+        System.out.println("\nProjects in " + selectedOrgName + sortLabel + ":");
         for (int i = 0; i < projects.size(); i++) {
-            terminal.writer().println((i + 1) + ". " + projects.get(i));
+            System.out.println((i + 1) + ". " + projects.get(i));
         }
-        terminal.writer().println("0. Cancel");
-        terminal.writer().flush();
+        System.out.println("0. Cancel");
+        System.out.flush();
 
-        String projectChoice = lineReader.readLine("Select project: ").trim();
+        String projectChoice = Prompt.ask("Select project: ").trim();
         if ("0".equals(projectChoice)) {
             return;
         }
@@ -257,86 +254,80 @@ public class ProjectManager {
             if (index >= 0 && index < projects.size()) {
                 String selectedProject = projects.get(index);
                 Path projectPath = orgPath.resolve(selectedProject);
-                boolean shouldExit = openProjectOptions(terminal, lineReader, settings, projectPath);
+                boolean shouldExit = openProjectOptions(settings, projectPath);
                 if (shouldExit) {
                     // Exit the entire program
                     System.exit(0);
                 }
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
             }
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
         }
     }
 
-    private static boolean openProjectOptions(Terminal terminal, LineReader lineReader, Settings settings, Path projectPath) {
-        terminal.writer().println("\n--- Open: " + projectPath.getFileName() + " ---");
-        terminal.writer().println("1. (C)hange to project directory in this terminal");
-        terminal.writer().println("2. Open in (F)ile Explorer");
-        terminal.writer().println("3. Open as Project in Code (E)ditor");
-        terminal.writer().println("0. E(x)it to Main Menu (Esc)");
-        terminal.writer().flush();
+    private static boolean openProjectOptions(Settings settings, Path projectPath) {
+        System.out.println("\n--- Open: " + projectPath.getFileName() + " ---");
+        System.out.println("1. (C)hange to project directory in this terminal");
+        System.out.println("2. Open in (F)ile Explorer");
+        System.out.println("3. Open as Project in Code (E)ditor");
+        System.out.println("0. E(x)it to Main Menu (Esc)");
+        System.out.flush();
 
-        String choice = readSingleKey(terminal);
+        String choice = readSingleKey();
 
         try {
             switch (choice.toLowerCase()) {
                 case "1":
                 case "c":
-                    changeToDirectoryInCurrentTerminal(terminal, projectPath);
+                    changeToDirectoryInCurrentTerminal(projectPath);
                     return true; // Signal to exit the program
                 case "2":
                 case "f":
                     openInExplorer(projectPath);
-                    terminal.writer().println("Opening in file explorer...");
-                    terminal.writer().flush();
+                    System.out.println("Opening in file explorer...");
+                    System.out.flush();
                     return true; // Exit after opening
                 case "3":
                 case "e":
                     openInEditor(settings, projectPath);
-                    terminal.writer().println("Opening in editor...");
-                    terminal.writer().flush();
+                    System.out.println("Opening in editor...");
+                    System.out.flush();
                     return true; // Exit after opening
                 case "0":
                 case "x":
                 case "\u001B": // ESC key
                     return false;
                 default:
-                    terminal.writer().println("Invalid option.");
-                    terminal.writer().flush();
+                    System.out.println("Invalid option.");
+                    System.out.flush();
             }
         } catch (IOException e) {
-            terminal.writer().println("Error: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error: " + e.getMessage());
+            System.out.flush();
         }
         return false;
     }
 
-    /** For the no-console case: there is no shell to hand a path to, so give them a new one. */
+    /**
+     * For the no-console case: there is no shell to hand a path to, so give them a new one.
+     * <p>
+     * Delegated rather than done here. This used to spawn {@code cmd.exe /k cd /d} itself, which
+     * handed a Command Prompt to somebody who had installed Tabby precisely to stop being handed
+     * one - {@link littlejlib.proj.terminal.TerminalRunner} is the one place that knows which
+     * terminal the user actually wants.
+     */
     public static boolean openTerminalAt(Path projectPath) {
+        Settings settings = null;
         try {
-            openInCmd(projectPath);
-            return true;
-        } catch (IOException e) {
-            return false;
+            settings = new SettingsManager().loadSettings();
+        } catch (Exception e) {
+            // no settings is not a reason to refuse a terminal; detection still answers
         }
-    }
-
-    private static void openInCmd(Path projectPath) throws IOException {
-        String os = System.getProperty("os.name").toLowerCase();
-        if (os.contains("win")) {
-            ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "start", "cmd.exe", "/k", "cd", "/d", projectPath.toString());
-            pb.start();
-        } else if (os.contains("mac")) {
-            new ProcessBuilder("open", "-a", "Terminal", projectPath.toString()).start();
-        } else {
-            ProcessBuilder pb = new ProcessBuilder("x-terminal-emulator");
-            pb.directory(projectPath.toFile());
-            pb.start();
-        }
+        return littlejlib.proj.terminal.TerminalRunner.open(projectPath, settings);
     }
 
     private static void openInExplorer(Path projectPath) throws IOException {
@@ -400,90 +391,90 @@ public class ProjectManager {
         return parts.toArray(new String[0]);
     }
 
-    private static void changeToDirectoryInCurrentTerminal(Terminal terminal, Path projectPath) {
-        terminal.writer().flush();
+    private static void changeToDirectoryInCurrentTerminal(Path projectPath) {
+        System.out.flush();
         Navigate.to(projectPath);
     }
 
-    public static void createNewProject(Terminal terminal, LineReader lineReader, Settings settings) {
-        terminal.writer().println("\n--- Create New Project ---");
+    public static void createNewProject(Settings settings) {
+        System.out.println("\n--- Create New Project ---");
 
-        Organization selectedOrg = selectOrganization(terminal, lineReader, settings);
+        Organization selectedOrg = selectOrganization(settings);
         if (selectedOrg == null) {
             return;
         }
 
         Path orgPath = Paths.get(settings.getCodeReposPath(), selectedOrg.getName());
 
-        terminal.writer().println("\nExisting projects in " + selectedOrg.getName() + ":");
+        System.out.println("\nExisting projects in " + selectedOrg.getName() + ":");
         if (Files.exists(orgPath)) {
             List<String> projects = listProjects(orgPath, false); // Alphabetical for new project creation
             if (!projects.isEmpty()) {
                 for (String project : projects) {
-                    terminal.writer().print(project + "  ");
+                    System.out.print(project + "  ");
                 }
-                terminal.writer().println();
+                System.out.println();
             } else {
-                terminal.writer().println("(No existing projects)");
+                System.out.println("(No existing projects)");
             }
         } else {
-            terminal.writer().println("(Organization directory will be created)");
+            System.out.println("(Organization directory will be created)");
         }
-        terminal.writer().flush();
+        System.out.flush();
 
-        String projectName = lineReader.readLine("\nEnter new project name: ").trim();
+        String projectName = Prompt.ask("\nEnter new project name: ").trim();
         if (projectName.isEmpty()) {
-            terminal.writer().println("Project name cannot be empty.");
-            terminal.writer().flush();
+            System.out.println("Project name cannot be empty.");
+            System.out.flush();
             return;
         }
 
         String defaultGroupId = selectedOrg.getGroupId() != null ? selectedOrg.getGroupId() : "com.example";
-        terminal.writer().println("Suggested Group ID: " + defaultGroupId);
-        terminal.writer().flush();
+        System.out.println("Suggested Group ID: " + defaultGroupId);
+        System.out.flush();
 
-        String groupId = lineReader.readLine("Enter Group ID (press Enter for default): ").trim();
+        String groupId = Prompt.ask("Enter Group ID (press Enter for default): ").trim();
         if (groupId.isEmpty()) {
             groupId = defaultGroupId;
         }
 
         Path projectPath = orgPath.resolve(projectName);
         if (Files.exists(projectPath)) {
-            terminal.writer().println("Project already exists: " + projectPath);
-            terminal.writer().flush();
+            System.out.println("Project already exists: " + projectPath);
+            System.out.flush();
             return;
         }
 
         try {
             Files.createDirectories(projectPath);
-            terminal.writer().println("Project directory created: " + projectPath);
-            terminal.writer().println("Group ID: " + groupId);
-            terminal.writer().println("Project Name: " + projectName);
-            terminal.writer().println("\nNote: You can now use 'Git Clone Repository' or manually initialize the project.");
-            terminal.writer().flush();
+            System.out.println("Project directory created: " + projectPath);
+            System.out.println("Group ID: " + groupId);
+            System.out.println("Project Name: " + projectName);
+            System.out.println("\nNote: You can now use 'Git Clone Repository' or manually initialize the project.");
+            System.out.flush();
         } catch (IOException e) {
-            terminal.writer().println("Error creating project: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error creating project: " + e.getMessage());
+            System.out.flush();
         }
     }
 
-    static Organization selectOrganization(Terminal terminal, LineReader lineReader, Settings settings) {
+    static Organization selectOrganization(Settings settings) {
         List<Organization> organizations = settings.getOrganizations();
 
         if (organizations.isEmpty()) {
-            terminal.writer().println("No organizations configured. Please add organizations in Settings.");
-            terminal.writer().flush();
+            System.out.println("No organizations configured. Please add organizations in Settings.");
+            System.out.flush();
             return null;
         }
 
-        terminal.writer().println("\nSelect Organization:");
+        System.out.println("\nSelect Organization:");
         for (int i = 0; i < organizations.size(); i++) {
-            terminal.writer().println((i + 1) + ". " + organizations.get(i).getName());
+            System.out.println((i + 1) + ". " + organizations.get(i).getName());
         }
-        terminal.writer().println("0. Cancel");
-        terminal.writer().flush();
+        System.out.println("0. Cancel");
+        System.out.flush();
 
-        String choice = lineReader.readLine("Select organization: ").trim();
+        String choice = Prompt.ask("Select organization: ").trim();
         if ("0".equals(choice)) {
             return null;
         }
@@ -493,13 +484,13 @@ public class ProjectManager {
             if (index >= 0 && index < organizations.size()) {
                 return organizations.get(index);
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
                 return null;
             }
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
             return null;
         }
     }
@@ -581,15 +572,15 @@ public class ProjectManager {
                 .toList();
     }
 
-    public static List<String> refreshProjects(Terminal terminal, Settings settings, ScanProgress progressListener) {
+    public static List<String> refreshProjects(Settings settings, ScanProgress progressListener) {
         Path codeReposPath = Paths.get(settings.getCodeReposPath());
         if (!Files.exists(codeReposPath) || !Files.isDirectory(codeReposPath)) {
             return new ArrayList<>();
         }
 
-        if (Main.isVerbose() && terminal != null) {
-            terminal.writer().println("Refreshing project list...");
-            terminal.writer().flush();
+        if (Main.isVerbose()) {
+            System.out.println("Refreshing project list...");
+            System.out.flush();
         }
 
         // Force immediate scan (not background)
@@ -598,43 +589,16 @@ public class ProjectManager {
         // Update application-level cache
         Main.updateCachedProjects(refreshedProjects);
 
-        if (Main.isVerbose() && terminal != null) {
-            terminal.writer().println("Project list refreshed.");
-            terminal.writer().flush();
+        if (Main.isVerbose()) {
+            System.out.println("Project list refreshed.");
+            System.out.flush();
         }
 
         return refreshedProjects;
     }
 
-    private static String readSingleKey(Terminal terminal) {
-        Attributes originalAttributes = null;
-        try {
-            // Save original attributes before entering raw mode
-            originalAttributes = terminal.getAttributes();
-
-            // Enable raw mode to read single characters
-            terminal.enterRawMode();
-            int c = terminal.reader().read();
-
-            // Handle ESC key
-            if (c == 27) {
-                return "\u001B";
-            }
-
-            return String.valueOf((char) c);
-        } catch (IOException e) {
-            terminal.writer().println("Error reading input: " + e.getMessage());
-            terminal.writer().flush();
-            return "";
-        } finally {
-            // Restore original attributes
-            if (originalAttributes != null) {
-                try {
-                    terminal.setAttributes(originalAttributes);
-                } catch (Exception e) {
-                    // Ignore
-                }
-            }
-        }
+    /** One keypress. Was JLine raw mode, in three identical copies; now one place. */
+    private static String readSingleKey() {
+        return Prompt.key();
     }
 }

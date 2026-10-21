@@ -20,9 +20,12 @@ public class SmokeSettingsToml {
     public static void main(String[] args) {
         var s = new Settings();
         s.setProjectScanningDepth(5);
+        s.setWorkspaceRefreshMinutes(90);
         s.setSingleFileEditor("C:\\user\\Apps\\VScode\\code.exe");
         s.setDefaultTerminal("Tabby");
-        s.setAgentCommand("claude \"@%PRP% read this PRP and let us begin\"");
+        // Deliberately not one of AgentLauncher.LEGACY_AGENT_COMMANDS: those are fossils and the
+        // codec MIGRATES them on write, so using one here tests the migration, not the round trip.
+        s.setAgentCommand("myagent %FLAGS% --prp \"%PRP_ABS%\" \"%PROMPT%\"");
         s.setPrpTemplateSrc("https://example.invalid/PRPTemplate.md");
         s.setStatusTemplate("PRP Number: %index%\nPRP Name: %name%\nStatus: IN PROGRESS\n\n## Notes\n");
 
@@ -44,9 +47,9 @@ public class SmokeSettingsToml {
                         "\"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoExit -Command & '%SCRIPT%'")));
 
         s.setOrganizations(List.of(
-                new Organization("uskoag", "io.github.uskoag"),
+                new Organization("acme", "io.github.acme"),
                 new Organization("xyz-jphil", "io.github.xyz-jphil"),
-                new Organization("kailasa-ngpt", "io.github.kailasa-ngpt")));
+                new Organization("example-org", "io.github.example-org")));
 
         var toml = SettingsCodec.write(s);
         System.out.println(toml);
@@ -55,6 +58,7 @@ public class SmokeSettingsToml {
         var back = SettingsCodec.read(toml);
 
         eq("scanDepth", s.getProjectScanningDepth(), back.getProjectScanningDepth());
+        eq("workspaceRefreshMinutes", s.getWorkspaceRefreshMinutes(), back.getWorkspaceRefreshMinutes());
         eq("singleFileEditor", s.getSingleFileEditor(), back.getSingleFileEditor());
         eq("defaultTerminal", s.getDefaultTerminal(), back.getDefaultTerminal());
         eq("agentCommand", s.getAgentCommand(), back.getAgentCommand());

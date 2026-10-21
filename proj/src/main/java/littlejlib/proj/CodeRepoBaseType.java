@@ -7,7 +7,7 @@ package littlejlib.proj;
  * All three are indexed and searchable. The type decides only what you see WITHOUT asking, because
  * the cost of a big mirror is noise in the results rather than time on the clock.
  */
-public enum CodeRepoBaseType {
+public enum CodeRepoBaseType implements littlejlib.proj.util.Slugged {
 
     PRIMARY("Primary", "your own code; always shown"),
     GITHUB_MIRROR("GitHub mirror", "the clone cache behind proj g; hidden unless included"),
@@ -41,6 +41,7 @@ public enum CodeRepoBaseType {
     }
 
     /** The spelling accepted on the command line and written to Settings.toml. */
+    @Override
     public String slug() {
         return switch (this) {
             case PRIMARY -> "primary";

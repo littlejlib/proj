@@ -25,6 +25,15 @@ public final class Client {
         var info = Info.read();
         if (info == null || !info.processAlive()) {
             if (!autoStart) throw new ConnectException("no daemon running");
+            // Said UNCONDITIONALLY, not behind --verbose: this is the one wait in the whole tool with
+            // no window and no progress bar to explain it, and the caller's own `log` is silent unless
+            // -v was passed. Without this line the whole multi-second cold start (database, JavaFX,
+            // the first Stage and Scene - see Server.run's own timing) looks like a hang rather than
+            // work in progress. Goes to stderr, via LogConfig so it survives --json, so a script
+            // reading stdout is untouched.
+            littlejlib.proj.LogConfig.err().println(
+                    "[proj] no project daemon running yet - starting one; the first open can take a few "
+                            + "seconds while it warms up");
             info = Launcher.startAndWait(log);
         }
 

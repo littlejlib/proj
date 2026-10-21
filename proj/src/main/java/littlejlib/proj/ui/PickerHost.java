@@ -53,8 +53,11 @@ public final class PickerHost {
     /** Builds the window without showing it. Called at daemon startup so the first open is cheap too. */
     public static void prewarm(List<Path> browsePaths, Settings settings) {
         Platform.runLater(() -> {
+            var t0 = littlejlib.proj.util.Boot.ms();
             try {
                 if (instance == null) instance = new ProjectPickerDialog(browsePaths, settings);
+                System.out.println("[PickerHost] prewarm built the Stage+Scene in "
+                        + (littlejlib.proj.util.Boot.ms() - t0) + "ms   +" + littlejlib.proj.util.Boot.ms() + "ms since boot");
             } catch (Exception e) {
                 System.err.println("[PickerHost] prewarm failed: " + e.getMessage());
             }
@@ -80,7 +83,12 @@ public final class PickerHost {
     }
 
     public static PickerResult show(List<Path> browsePaths, Settings settings, String tab) {
+        System.out.println("[PickerHost] show() requested   +" + littlejlib.proj.util.Boot.ms() + "ms since boot");
         return JavaFXManager.getInstance().<PickerResult>showDialog((lock, holder) -> {
+            // Reached only once the FX thread gets to this task - queued behind prewarm's own task
+            // when this is the very first "open" of a daemon that has not finished warming up yet.
+            System.out.println("[PickerHost] show() reached the FX thread   +"
+                    + littlejlib.proj.util.Boot.ms() + "ms since boot   (instance built: " + (instance != null) + ")");
             // Settings can change between invocations; a picker built for other roots, or built
             // before a settings change, is discarded rather than shown out of date.
             if (instance != null && (stale || !instance.covers(browsePaths))) {
@@ -90,6 +98,7 @@ public final class PickerHost {
             stale = false;
             if (instance == null) instance = new ProjectPickerDialog(browsePaths, settings);
             instance.reopen(lock, holder, tab);
+            System.out.println("[PickerHost] window shown   +" + littlejlib.proj.util.Boot.ms() + "ms since boot");
         }, 900_000);
     }
 

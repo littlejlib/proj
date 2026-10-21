@@ -5,117 +5,123 @@ import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import littlejlib.proj.Settings;
+import littlejlib.proj.group.Groups;
+import littlejlib.proj.group.ProjectGroup;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * The main window's top level: Projects, Recent PRPs, Settings.
- * <p>
- * Settings used to be a modal window opened from a menu opened from this window - three gestures to
- * reach a path you can already see is wrong. The global PRP list was another modal, reached the same
- * way, and it is the thing you want FIRST on a morning when you cannot remember which of nine
- * projects you left half-finished. Both are now a tab.
- * <p>
- * CONTENT IS BUILT ON FIRST SELECTION. This window is constructed at daemon startup so that the
- * first {@code proj o} is instant; the settings pane walks the disk for terminals and IDEs, and the
- * global PRP list walks every code base. Neither is a cost anyone should pay for a tab they have not
- * opened, and the global scan is a cost worth paying only when it is being looked at.
- * <p>
- * SWITCHED WITH ALT AND A DIGIT. Every bare key belongs to the filter box and every function key is
- * already an action, so a modifier is unavoidable - and switching tabs is the rare thing genuinely
- * done once a session, which is what Alt is reserved for. See guidelines.keyboard-shortcuts.
+ * The main window's tab strip: two tabs per GROUP - its rows and its PRPs - then Transcripts and
+ * Settings. One flat level.
  */
 public final class PickerTabs {
 
     public final TabPane pane = new TabPane();
-    public final Tab projects, global, transcripts, settings;
-    public final PrpPanel globalPanel;
+    public final Tab projects, transcripts, settings;
     public final TranscriptsTab transcriptsTab;
+    public final List<GroupTab> groups = new ArrayList<>();
 
     final Settings config;
     final Supplier<Stage> stage;
-    final List<Path> roots;
     final Supplier<List<Path>> knownProjects;
     final Runnable onProjects;
 
-    /**
-     * @param knownProjects where the projects are, from the index the picker has already loaded.
-     *                     Supplied rather than walked: see {@code GlobalPrpScanner.scanProjects}
-     */
     public PickerTabs(Node projectsContent, Settings config, Supplier<Stage> stage, List<Path> roots,
                       Supplier<List<Path>> knownProjects, Runnable onProjects,
                       java.util.function.Consumer<Path> onActivateProject) {
         this.config = config;
         this.stage = stage;
-        this.roots = roots;
         this.knownProjects = knownProjects;
         this.onProjects = onProjects;
 
-        projects = new Tab("Projects", projectsContent);
-        projects.setTooltip(new Tooltip("The project index   (Alt+1)"));
-
-        globalPanel = new PrpPanel(config, true, null);
-        global = new Tab("Recent PRPs", globalPanel.root);
-        global.setTooltip(new Tooltip("The " + PrpPanel.GLOBAL_LIMIT
-                + " most recently active PRPs, across every project   (Alt+2)"));
+        for (var group : Groups.of(config)) {
+            groups.add(rowsTab(group, projectsContent));
+            groups.add(prpsTab(group));
+        }
+        projects = groups.get(0).tab;
 
         transcriptsTab = new TranscriptsTab(config, onActivateProject);
         transcripts = new Tab("Transcripts");
-        transcripts.setTooltip(new Tooltip("Every claude-code conversation on this machine, "
-                + "searched by what was said in it   (Alt+3)"));
-
         settings = new Tab("Settings");
-        settings.setTooltip(new Tooltip("Code bases, terminals, editors, the agent   (Alt+4)"));
 
         pane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        pane.getTabs().addAll(projects, global, transcripts, settings);
+        groups.forEach(g -> pane.getTabs().add(g.tab));
+        pane.getTabs().addAll(transcripts, settings);
+        retitle();
         pane.getSelectionModel().selectedItemProperty().addListener((o, a, b) -> onSelected(b));
     }
 
-    void onSelected(Tab selected) {
-        if (selected == transcripts) {
-            if (transcripts.getContent() == null) transcripts.setContent(transcriptsTab.build());
-            transcriptsTab.start();
-            Platform.runLater(transcriptsTab::focusSearch);
+    GroupTab rowsTab(ProjectGroup group, Node projectsContent) {
+        if (group.isCode()) {
+            return new GroupTab(group, false, new Tab(group.displayLabel(), projectsContent), null, null);
         }
-        if (selected == settings && settings.getContent() == null) {
-            settings.setContent(new SettingsPane(config, stage::get,
-                    () -> Toast.show("settings saved - reopen the picker to pick up column changes"),
-                    null).root);
+        var folders = new WorkspacePane(group, config);
+        return new GroupTab(group, false, new Tab(group.displayLabel(), folders.root), null, folders);
+    }
+
+    GroupTab prpsTab(ProjectGroup group) {
+        var panel = new PrpPanel(config, true, null);
+        return new GroupTab(group, true, new Tab(group.displayLabel() + " PRPs", panel.root), panel, null);
+    }
+
+    /** Each tab wears its key, because a key nobody can see is a key nobody has. */
+    void retitle() {
+        var all = pane.getTabs();
+        for (var i = 0; i < all.size() && i < 9; i++) {
+            var tab = all.get(i);
+            tab.setTooltip(new Tooltip(tab.getText() + "   (Alt+" + (i + 1) + ")"));
         }
-        if (selected == global) {
-            // Scanned once per open of the tab rather than once ever: PRPs are edited constantly,
-            // including by the agents this window starts, so a list cached from an hour ago would
-            // be wrong in exactly the way that matters.
-            globalPanel.showGlobal(this::findPrps);
-            globalPanel.showFocus(true);
-            Platform.runLater(globalPanel::focusTree);
-        } else {
-            globalPanel.showFocus(false);
-        }
-        if (selected == projects && onProjects != null) onProjects.run();
     }
 
     /**
-     * Runs off the UI thread. Uses the loaded project index when there is one - which is nearly
-     * always, because this tab cannot be clicked before the window that loads it is open - and falls
-     * back to walking the code bases when there is not, so an empty index shows PRPs rather than
-     * nothing at all.
+     * True while Left/Right is walking the strip, so that passing OVER a tab does not pull the
+     * focus down into it.
      */
-    List<littlejlib.proj.prp.GlobalPrpEntry> findPrps() {
-        var known = knownProjects == null ? List.<Path>of() : knownProjects.get();
-        if (!known.isEmpty()) return littlejlib.proj.prp.GlobalPrpScanner.scanProjects(known);
+    boolean walking;
 
-        var all = new java.util.ArrayList<littlejlib.proj.prp.GlobalPrpEntry>();
-        for (var root : roots) {
-            all.addAll(littlejlib.proj.prp.GlobalPrpScanner
-                    .scanAllProjects(root, config.getProjectScanningDepth()));
+    void onSelected(Tab selected) {
+        var passingThrough = walking;
+        if (selected == transcripts) {
+            if (transcripts.getContent() == null) transcripts.setContent(transcriptsTab.build());
+            transcriptsTab.start();
+            if (!passingThrough) Platform.runLater(transcriptsTab::focusSearch);
+            return;
         }
-        return all;
+        if (selected == settings) {
+            if (settings.getContent() == null) {
+                settings.setContent(new SettingsPane(config, stage::get,
+                        () -> Toast.show("settings saved - reopen the picker to pick up column changes"),
+                        null).root);
+            }
+            return;
+        }
+        var group = groupOf(selected);
+        if (group == null) return;
+        GroupRefresh.onShown(group, knownProjects);
+        if (passingThrough) return;
+        if (group.isCodeRows() && onProjects != null) onProjects.run();
+        else Platform.runLater(group::focusFilter);
+    }
+
+    public GroupTab groupOf(Tab tab) {
+        return groups.stream().filter(g -> g.tab == tab).findFirst().orElse(null);
+    }
+
+    public GroupTab selectedGroup() {
+        return groupOf(selected());
+    }
+
+    /** True only on the CODE group's rows tab - where the picker's own keys mean something. */
+    public boolean codeProjectsShowing() {
+        var g = selectedGroup();
+        return g != null && g.isCodeRows();
     }
 
     public Tab selected() {
@@ -126,15 +132,82 @@ public final class PickerTabs {
         pane.getSelectionModel().select(tab);
     }
 
-    /** Alt+1/2/3/4. Returns true when the key was one of them, so the caller can stop. */
-    public boolean onAltDigit(javafx.scene.input.KeyEvent e) {
-        if (Keys.alt(e, javafx.scene.input.KeyCode.DIGIT1)) select(projects);
-        else if (Keys.alt(e, javafx.scene.input.KeyCode.DIGIT2)) select(global);
-        else if (Keys.alt(e, javafx.scene.input.KeyCode.DIGIT3)) select(transcripts);
-        else if (Keys.alt(e, javafx.scene.input.KeyCode.DIGIT4)) select(settings);
-        else return false;
+    /** Alt and a digit, counting along the strip. */
+    public boolean onAltDigit(KeyEvent e) {
+        var all = pane.getTabs();
+        for (var i = 0; i < all.size() && i < 9; i++) {
+            if (Keys.alt(e, Keys.digit(i + 1))) {
+                select(all.get(i));
+                e.consume();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Left and Right while the strip holds the focus, and Down to descend back into the pane - the
+     * top of the same spatial rule the panes below already follow.
+     */
+    public boolean onStripArrow(KeyEvent e) {
+        var all = pane.getTabs();
+        var at = all.indexOf(selected());
+        if (at < 0) return false;
+        // Down is the only way the strip hands focus downward; Left/Right stay on it.
+        if (e.getCode() == KeyCode.DOWN) {
+            descend();
+        } else if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.RIGHT) {
+            var step = e.getCode() == KeyCode.LEFT ? -1 : 1;
+            walking = true;
+            try {
+                select(all.get(Math.floorMod(at + step, all.size())));
+            } finally {
+                walking = false;
+            }
+            focusStrip();
+        } else {
+            return false;
+        }
         e.consume();
         return true;
+    }
+
+    /**
+     * Puts the focus back where typing belongs on whatever tab is showing - EVERY tab, including
+     * the two that are not groups. Down off the strip has to land somewhere on all of them, or the
+     * strip becomes a place you can get into and not out of.
+     */
+    public void descend() {
+        var g = selectedGroup();
+        if (g != null) {
+            Platform.runLater(g::focusFilter);
+        } else if (selected() == transcripts) {
+            Platform.runLater(transcriptsTab::focusSearch);
+        } else if (selected() == settings && settings.getContent() != null) {
+            Platform.runLater(() -> settings.getContent().requestFocus());
+        }
+    }
+
+    /**
+     * Up out of a filter box lands here.
+     */
+    public void focusStrip() {
+        pane.requestFocus();
+    }
+
+    public boolean stripHasFocus() {
+        var scene = pane.getScene();
+        if (scene == null) return false;
+        var owner = scene.getFocusOwner();
+        if (owner == pane) return true;
+        for (var n = owner; n != null; n = n.getParent()) {
+            if (n == pane) {
+                // Inside the TabPane, but only the header counts - the content is a pane of its own.
+                return n.getStyleClass().contains("tab-header-area") || owner.getStyleClass().contains("tab");
+            }
+            if (n.getStyleClass().contains("tab-header-area")) return true;
+        }
+        return false;
     }
 
     /** A tab by the name a command line used: {@code proj cct} asks for "transcripts". */
@@ -142,9 +215,14 @@ public final class PickerTabs {
         if (name == null || name.isBlank()) return projects;
         return switch (name.toLowerCase(java.util.Locale.ROOT)) {
             case "transcripts", "cct", "cctranscripts", "chats" -> transcripts;
-            case "prps", "prp", "global-prp", "recent" -> global;
             case "settings", "config" -> settings;
-            default -> projects;
+            case "prps", "prp", "global-prp", "recent" -> groups.get(1).tab;
+            default -> bySlug(name);
         };
+    }
+
+    Tab bySlug(String name) {
+        return groups.stream().filter(g -> !g.prps && name.equalsIgnoreCase(g.group.slug()))
+                .map(g -> g.tab).findFirst().orElse(projects);
     }
 }

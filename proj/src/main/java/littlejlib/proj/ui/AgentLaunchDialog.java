@@ -58,7 +58,9 @@ public final class AgentLaunchDialog {
         AppIcon.on(stage);
         stage.setWidth(860);
 
-        var heading = new Label(PrpPrompt.relative(project, prpFile));
+        var ticket = littlejlib.proj.prp.TabName.ticketOf(prpFile,
+                littlejlib.proj.prp.PrpSessions.key(project));
+        var heading = new Label(ticket + "   ·   " + PrpPrompt.relative(project, prpFile));
         heading.setStyle("-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #1565C0;");
 
         var where = new Label("Working directory: " + project
@@ -69,9 +71,15 @@ public final class AgentLaunchDialog {
         // of terminals all called cmd.exe is unreadable by the third one; and how much of the last
         // session's log to re-read, because that is the one number that genuinely varies by session
         // - and changing a SETTING to start one agent is a setting you forget to change back.
-        var tabName = new TextField(PrpPrompt.tabTitle(prpFile));
+        // Minted ONCE, here, and used by both the preview and the launch: a second id would mean the
+        // command shown is not the command run, and the recorded conversation would not exist.
+        var sessionId = AgentLauncher.newSessionId();
+
+        var tabName = new TextField(littlejlib.proj.prp.PrpSessions.tabName(prpFile));
         tabName.setPrefWidth(360);
-        var tabRow = new HBox(8, new Label("Tab name"), tabName);
+        var tabHint = new Label("first part is this project's key - change it here and it is remembered");
+        tabHint.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
+        var tabRow = new HBox(8, new Label("Tab name"), tabName, tabHint);
         tabRow.setAlignment(Pos.CENTER_LEFT);
 
         var logs = littlejlib.proj.prp.PrpLogs.latest(
@@ -98,9 +106,10 @@ public final class AgentLaunchDialog {
         // Recomputed as the percentage changes, so what is shown is always what will run. A preview
         // that goes stale the moment a field is touched is worse than no preview.
         java.util.function.Supplier<String> commandNow =
-                () -> PrpPrompt.command(prpFile, settings, tail.getValue());
+                () -> PrpPrompt.command(prpFile, settings, tail.getValue(), sessionId, tabName.getText());
         command.setText(commandNow.get());
         tail.valueProperty().addListener((o, a, b) -> command.setText(commandNow.get()));
+        tabName.textProperty().addListener((o, a, b) -> command.setText(commandNow.get()));
 
         var permissions = new Label(settings != null && settings.isAgentSkipPermissions()
                 ? "Permission prompts are OFF for this agent (" + PrpPrompt.SKIP_PERMISSIONS
@@ -117,7 +126,7 @@ public final class AgentLaunchDialog {
             if (slot > 8) break;                       // F9..F12 are spoken for below
             var key = KeyCode.valueOf("F" + slot++);
             Runnable go = () -> {
-                launch(t, prpFile, project, settings, tabName.getText(), tail.getValue());
+                launch(t, prpFile, project, settings, tabName.getText(), tail.getValue(), sessionId);
                 stage.close();
             };
             keys.put(key, go);
@@ -126,9 +135,14 @@ public final class AgentLaunchDialog {
 
         Runnable pasteMode = () -> {
             PrpActions.copy(PrpPrompt.of(prpFile, settings, tail.getValue()));
-            TerminalRunner.runIn(null, project, PrpPrompt.commandWithoutPrompt(settings),
-                    "prp-paste", settings, tabName.getText());
-            Toast.show("agent started empty - the prompt is on the clipboard");
+            var empty = PrpPrompt.commandWithoutPrompt(settings, sessionId, tabName.getText());
+            var name = tabName.getText();
+            remember(sessionId, prpFile, project, name);
+            BackgroundLaunch.run(
+                    () -> TerminalRunner.outcomeOf(null, project, empty, "prp-paste", settings, name),
+                    outcome -> Toast.show(outcome == littlejlib.proj.terminal.RunOutcome.FAILED
+                            ? "could not open a terminal - the prompt is on the clipboard"
+                            : "agent started empty - the prompt is on the clipboard"));
             stage.close();
         };
         keys.put(KeyCode.F9, pasteMode);
@@ -174,17 +188,28 @@ public final class AgentLaunchDialog {
     }
 
     static void launch(TerminalLauncher terminal, Path prpFile, Path project, Settings settings,
-                       String tabName, int percent) {
-        var command = PrpPrompt.command(prpFile, settings, percent);
+                       String tabName, int percent, String sessionId) {
+        var command = PrpPrompt.command(prpFile, settings, percent, sessionId, tabName);
         if (terminal.canRun()) {
-            var ok = TerminalRunner.runIn(terminal, project, command,
-                    "prp-" + prpFile.getFileName(), settings, tabName);
-            Toast.show(ok ? "started on " + PrpPrompt.relative(project, prpFile) + " in " + terminal.getName()
-                    : "could not start " + terminal.getName() + " - check Settings");
+            // Recorded BEFORE the launch rather than after it: the id is already in the command line
+            // that is about to run, so the row is true either way, and the launch takes seconds.
+            remember(sessionId, prpFile, project, tabName);
+            Toast.show("starting " + tabName + " in " + terminal.getName() + " ...");
+            BackgroundLaunch.run(
+                    () -> TerminalRunner.outcomeOf(terminal, project, command,
+                            "prp-" + prpFile.getFileName(), settings, tabName),
+                    outcome -> Toast.show(switch (outcome) {
+                        case RAN, QUEUED -> "started on " + PrpPrompt.relative(project, prpFile)
+                                + " in " + terminal.getName();
+                        case OPENED_ONLY -> terminal.getName() + " opened at the project root - "
+                                + outcome.note();
+                        case FAILED -> "could not start " + terminal.getName() + " - check Settings";
+                    }));
             return;
         }
         // It cannot be told to run something, so it is told to be somewhere, and the command is put
         // where one keystroke will produce it.
+        remember(sessionId, prpFile, project, tabName);
         PrpActions.copy(command);
         if (TerminalRunner.openIn(terminal, project)) {
             Toast.show(terminal.getName() + " opened at the project root - the command is on the "
@@ -192,6 +217,15 @@ public final class AgentLaunchDialog {
         } else {
             Toast.show("could not open " + terminal.getName() + " - the command is on the clipboard");
         }
+    }
+
+    /**
+     * The session and the name it was given, kept so this PRP can be resumed and so the name typed
+     * here is the one offered next time - for this PRP, and for the next PRP of the same project.
+     */
+    static void remember(String sessionId, Path prpFile, Path project, String tabName) {
+        littlejlib.proj.prp.PrpSessions.record(sessionId, prpFile,
+                PrpPrompt.indexOf(prpFile), project, tabName);
     }
 
     static String label(KeyCode key, TerminalLauncher t) {

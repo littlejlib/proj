@@ -224,6 +224,11 @@ public final class PrpCommands {
         @Option(names = "--print", description = "Print what would run and exit, without opening a terminal")
         boolean dryRun;
 
+        @Option(names = {"--new-terminal", "--new-tab"},
+                description = "Open another terminal instead of running here. Default when there is "
+                        + "no console to run in, which is every launch from the picker")
+        boolean newTerminal;
+
         @Override
         public void run() {
             var project = projectDir(dir);
@@ -248,10 +253,14 @@ public final class PrpCommands {
                     OUT.println("terminal   " + (runner == null ? "none available" : runner.getName())
                             + (runner != null && !runner.getName().equals(preferred.getName())
                                 ? "   (" + preferred.getName() + " cannot run a command)" : ""));
+                    OUT.println("tab        " + plan.tabName());
+                    OUT.println("runs in    "
+                            + (littlejlib.proj.terminal.TerminalRunner.startsHere(newTerminal)
+                            ? "this terminal" : "a new " + (runner == null ? "terminal" : runner.getName()) + " tab"));
                     OUT.println("command    " + plan.command());
                     return;
                 }
-                startAgent(prp);
+                startAgent(prp, newTerminal);
             } catch (NumberFormatException e) {
                 ERR.println("not a PRP index: " + index);
                 System.exit(2);
@@ -263,13 +272,31 @@ public final class PrpCommands {
     }
 
     static void startAgent(Path prpFile) {
+        startAgent(prpFile, false);
+    }
+
+    /**
+     * @param newTerminal open another terminal even though this one would do
+     */
+    static void startAgent(Path prpFile, boolean newTerminal) {
         var settings = new SettingsManager().loadSettings();
         var plan = littlejlib.proj.prp.AgentLauncher.plan(prpFile, settings);
-        if (littlejlib.proj.prp.AgentLauncher.launch(prpFile, settings)) {
-            OUT.println("started in " + plan.projectDir() + ":  " + plan.command());
-        } else {
-            ERR.println("could not start a terminal - register one with 'proj settings'");
-            System.exit(3);
+
+        // Recorded BEFORE anything runs. A session that was never recorded cannot be resumed, and
+        // the queued case leaves no moment afterwards: the shell runs the command once we exit.
+        littlejlib.proj.prp.PrpSessions.record(plan);
+
+        switch (littlejlib.proj.prp.AgentLauncher.start(plan, settings, null, newTerminal)) {
+            // The shell echoes the command itself as it runs it, so saying it again here is noise.
+            case QUEUED -> ERR.println("starting in this terminal - proj prp agent "
+                    + PrpPrompt.indexOf(prpFile) + " --new-terminal opens a tab instead");
+            case RAN -> OUT.println("started in " + plan.projectDir() + ":  " + plan.command());
+            case OPENED_ONLY -> OUT.println("opened a shell in " + plan.projectDir()
+                    + " - the command is on the clipboard");
+            case FAILED -> {
+                ERR.println("could not start a terminal - register one with 'proj settings'");
+                System.exit(3);
+            }
         }
     }
 
@@ -366,10 +393,25 @@ public final class PrpCommands {
                 OUT.println(w.file().toString());
                 ERR.println("wrote " + w.turns() + " entries (" + w.bytes() / 1024 + " KB) from session "
                         + w.session().getFileName());
+                // Exporting a log is also the moment the session becomes worth resuming, and both
+                // facts are already in hand here - so a session started by hand ends up recorded
+                // without anybody having to think about it.
+                remember(w, entry, target);
             } catch (RuntimeException e) {
                 ERR.println(e.getMessage());
                 System.exit(3);
             }
+        }
+
+        /** Only if it is not already recorded: an existing row carries the tab name that was used. */
+        private void remember(PrpLogExport.Written w, PrpEntry entry, Path prpDir) {
+            var name = w.session().getFileName().toString();
+            var id = name.endsWith(".jsonl") ? name.substring(0, name.length() - 6) : name;
+            var project = prpDir.getParent() == null ? prpDir : prpDir.getParent();
+            if (littlejlib.proj.prp.PrpSessions.of(entry.getMainFile()).stream()
+                    .anyMatch(s -> id.equals(s.sessionId()))) return;
+            littlejlib.proj.prp.PrpSessions.record(id, entry.getMainFile(), entry.getIndex(),
+                    project, littlejlib.proj.prp.PrpSessions.tabName(entry.getMainFile()));
         }
 
         private Path oneSession(String idOrPrefix) {
@@ -459,6 +501,8 @@ public final class PrpCommands {
             var found = PrpInstructions.collect(sessionFile);
             var keep = PrpInstructions.notAlreadyIn(found.entries(), prpText);
             var id = PrpInstructions.sessionIdOf(sessionFile);
+            if (found.skippedMachine() > 0)
+                ERR.println(found.skippedMachine() + " turn(s) from other sessions or the harness skipped in " + id);
             if (keep.isEmpty()) return 0;
             var block = PrpInstructions.block(found, keep, id);
             if (toStdout || dryRun) {

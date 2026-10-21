@@ -6,7 +6,7 @@ import java.nio.file.Path;
 /**
  * What proj loads so an AOT cache trained on a run is worth having.
  *
- * <p>The mechanism moved to {@code littlejlib-aot} (in {@code littlejlib/jr/aot}) so every jr-launched tool
+ * <p>The mechanism moved to {@code io.github.jarrunner:aot} (repo {@code jarrunner/aot}) so every jr-launched tool
  * can have it; what stays here is the only part that was ever proj-specific — <b>which</b> code to load and
  * which of it is worth genuinely running. Same entry points as before, so nothing calling this changed.
  *
@@ -32,9 +32,9 @@ public final class AotWarmup {
      * <p>So: name the packages that are startup-critical and expensive, and leave the rest to lazy loading.
      * {@code wholeApp()} suits an application whose jar is mostly code it actually runs.
      */
-    static littlejlib.aot.AotWarmup config(PrintStream log) {
-        return littlejlib.aot.AotWarmup.packages(
-                        "littlejlib/proj/", "org/jline/", "picocli/", "com/arcadedb/",
+    static jarrunner.aot.AotWarmup config(PrintStream log) {
+        return jarrunner.aot.AotWarmup.packages(
+                        "littlejlib/proj/", "picocli/", "com/arcadedb/",
                         "javafx/", "com/sun/javafx/", "com/google/gson/",
                         "com/fasterxml/jackson/", "xyz/jphil/")
                 .maxClasses(12_000)
@@ -62,11 +62,6 @@ public final class AotWarmup {
         } catch (Throwable t) {
             log.println("[warmup] settings load skipped: " + t);
         }
-        try (var terminal = org.jline.terminal.TerminalBuilder.builder().dumb(true).build()) {
-            terminal.getWidth();
-        } catch (Throwable t) {
-            log.println("[warmup] terminal build skipped: " + t);
-        }
         try {
             new picocli.CommandLine(new littlejlib.proj.Main())
                     .getCommandSpec().subcommands().size();
@@ -75,10 +70,10 @@ public final class AotWarmup {
         }
     }
 
-    /** @deprecated use {@link littlejlib.aot.AotWarmup#ownCodeSource()}. */
+    /** @deprecated use {@link jarrunner.aot.AotWarmup#ownCodeSource()}. */
     @Deprecated
     public static Path jarPath() {
-        var p = littlejlib.aot.AotWarmup.ownCodeSource();
+        var p = jarrunner.aot.AotWarmup.ownCodeSource();
         return p != null && p.toString().endsWith(".jar") ? p : null;
     }
 }

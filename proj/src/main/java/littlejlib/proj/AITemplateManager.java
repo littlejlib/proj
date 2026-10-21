@@ -1,8 +1,5 @@
 package littlejlib.proj;
 
-import org.jline.reader.LineReader;
-import org.jline.terminal.Attributes;
-import org.jline.terminal.Terminal;
 import littlejlib.proj.ui.GlobalPrpManagerDialog;
 import littlejlib.proj.ui.PrpManagerDialog;
 
@@ -63,101 +60,74 @@ public class AITemplateManager {
      * Legacy CLI-based PRP manager (deprecated - use manageTemplatesUI instead)
      */
     @Deprecated
-    public static void manageTemplates(Terminal terminal, LineReader lineReader, Settings settings) {
+    public static void manageTemplates(Settings settings) {
         while (true) {
-            terminal.writer().println("\n--- Project Requirements Prompts (PRPs) Management ---");
-            terminal.writer().println("1. Create a (N)ew PRP and open in Editor");
-            terminal.writer().println("2. (L)ist existing PRPs");
-            terminal.writer().println("3. (V)iew a PRP's Details");
-            terminal.writer().println("4. (O)pen a PRP in Editor");
-            terminal.writer().println("5. Open a PRP's (S)tatus in Editor");
-            terminal.writer().println("6. (C)lose/Reopen PRP");
-            terminal.writer().println("0. E(x)it to Main Menu (Esc)");
-            terminal.writer().println();
-            terminal.writer().flush();
+            System.out.println("\n--- Project Requirements Prompts (PRPs) Management ---");
+            System.out.println("1. Create a (N)ew PRP and open in Editor");
+            System.out.println("2. (L)ist existing PRPs");
+            System.out.println("3. (V)iew a PRP's Details");
+            System.out.println("4. (O)pen a PRP in Editor");
+            System.out.println("5. Open a PRP's (S)tatus in Editor");
+            System.out.println("6. (C)lose/Reopen PRP");
+            System.out.println("0. E(x)it to Main Menu (Esc)");
+            System.out.println();
+            System.out.flush();
 
-            String choice = readSingleKey(terminal);
+            String choice = readSingleKey();
 
             switch (choice.toLowerCase()) {
                 case "1":
                 case "n":
-                    createPRP(terminal, lineReader, settings);
+                    createPRP(settings);
                     break;
                 case "2":
                 case "l":
-                    listPRPs(terminal, lineReader);
+                    listPRPs();
                     break;
                 case "3":
                 case "v":
-                    viewPRPDetails(terminal, lineReader);
+                    viewPRPDetails();
                     break;
                 case "4":
                 case "o":
-                    openPRP(terminal, lineReader, settings);
+                    openPRP(settings);
                     break;
                 case "5":
                 case "s":
-                    openPRPStatus(terminal, lineReader, settings);
+                    openPRPStatus(settings);
                     break;
                 case "6":
                 case "c":
-                    togglePRPStatus(terminal, lineReader);
+                    togglePRPStatus();
                     break;
                 case "0":
                 case "x":
                 case "\u001B": // ESC key
                     return;
                 default:
-                    terminal.writer().println("Invalid option.");
-                    terminal.writer().flush();
+                    System.out.println("Invalid option.");
+                    System.out.flush();
             }
         }
     }
 
-    private static String readSingleKey(Terminal terminal) {
-        Attributes originalAttributes = null;
-        try {
-            // Save original attributes before entering raw mode
-            originalAttributes = terminal.getAttributes();
-
-            // Enable raw mode to read single characters
-            terminal.enterRawMode();
-            int c = terminal.reader().read();
-
-            // Handle ESC key
-            if (c == 27) {
-                return "\u001B";
-            }
-
-            return String.valueOf((char) c);
-        } catch (IOException e) {
-            terminal.writer().println("Error reading input: " + e.getMessage());
-            terminal.writer().flush();
-            return "";
-        } finally {
-            // Restore original attributes
-            if (originalAttributes != null) {
-                try {
-                    terminal.setAttributes(originalAttributes);
-                } catch (Exception e) {
-                    // Ignore
-                }
-            }
-        }
+    /** One keypress. Was JLine raw mode, in three identical copies; now one place. */
+    private static String readSingleKey() {
+        return Prompt.key();
     }
 
-    private static void createReadme(Terminal terminal, LineReader lineReader) {
-        terminal.writer().println("\n--- Create README.md ---");
-        terminal.writer().flush();
+    private static void createReadme() {
+        System.out.println("\n--- Create README.md ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path readmePath = currentDir.resolve("README.md");
 
         if (Files.exists(readmePath)) {
-            String confirm = lineReader.readLine("README.md already exists. Overwrite? (y/n): ").trim();
+            String confirm = Prompt.ask("README.md already exists. Overwrite? (y/n): ").trim();
             if (!confirm.equalsIgnoreCase("y")) {
-                terminal.writer().println("Cancelled.");
-                terminal.writer().flush();
+                System.out.println("Cancelled.");
+                System.out.flush();
                 return;
             }
         }
@@ -175,17 +145,17 @@ public class AITemplateManager {
 
         try {
             Files.writeString(readmePath, readmeContent);
-            terminal.writer().println("README.md created successfully at: " + readmePath);
-            terminal.writer().flush();
+            System.out.println("README.md created successfully at: " + readmePath);
+            System.out.flush();
         } catch (IOException e) {
-            terminal.writer().println("Error creating README.md: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error creating README.md: " + e.getMessage());
+            System.out.flush();
         }
     }
 
-    private static void createPRP(Terminal terminal, LineReader lineReader, Settings settings) {
-        terminal.writer().println("\n--- Create New PRP ---");
-        terminal.writer().flush();
+    private static void createPRP(Settings settings) {
+        System.out.println("\n--- Create New PRP ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path prpDir = currentDir.resolve("prp");
@@ -193,17 +163,17 @@ public class AITemplateManager {
         try {
             if (!Files.exists(prpDir)) {
                 Files.createDirectories(prpDir);
-                terminal.writer().println("Created prp directory: " + prpDir);
-                terminal.writer().flush();
+                System.out.println("Created prp directory: " + prpDir);
+                System.out.flush();
             }
 
             int nextIndex = getNextPRPIndex(prpDir);
             String indexStr = String.format("%02d", nextIndex);
 
-            String prpName = lineReader.readLine("Enter PRP name: ").trim();
+            String prpName = Prompt.ask("Enter PRP name: ").trim();
             if (prpName.isEmpty()) {
-                terminal.writer().println("PRP name cannot be empty.");
-                terminal.writer().flush();
+                System.out.println("PRP name cannot be empty.");
+                System.out.flush();
                 return;
             }
 
@@ -212,8 +182,8 @@ public class AITemplateManager {
             Path prpPath = prpDir.resolve(fileName);
 
             if (Files.exists(prpPath)) {
-                terminal.writer().println("PRP already exists: " + fileName);
-                terminal.writer().flush();
+                System.out.println("PRP already exists: " + fileName);
+                System.out.flush();
                 return;
             }
 
@@ -222,9 +192,9 @@ public class AITemplateManager {
             try {
                 templateContent = PRPTemplateLoader.loadTemplate(settings.getPrpTemplateSrc());
             } catch (IOException e) {
-                terminal.writer().println("Warning: Failed to load template from source. Using fallback template.");
-                terminal.writer().println("Error: " + e.getMessage());
-                terminal.writer().flush();
+                System.out.println("Warning: Failed to load template from source. Using fallback template.");
+                System.out.println("Error: " + e.getMessage());
+                System.out.flush();
                 templateContent = PRPTemplateLoader.loadTemplate(null); // Use default
             }
 
@@ -233,27 +203,27 @@ public class AITemplateManager {
                     .replace("%name%", prpName);
 
             Files.writeString(prpPath, content);
-            terminal.writer().println("PRP created: " + prpPath);
-            terminal.writer().flush();
+            System.out.println("PRP created: " + prpPath);
+            System.out.flush();
 
-            openInEditor(settings, prpPath, terminal);
+            openInEditor(settings, prpPath);
 
         } catch (IOException e) {
-            terminal.writer().println("Error creating PRP: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error creating PRP: " + e.getMessage());
+            System.out.flush();
         }
     }
 
-    private static void listPRPs(Terminal terminal, LineReader lineReader) {
-        terminal.writer().println("\n--- List PRPs ---");
-        terminal.writer().flush();
+    private static void listPRPs() {
+        System.out.println("\n--- List PRPs ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path prpDir = currentDir.resolve("prp");
 
         if (!Files.exists(prpDir)) {
-            terminal.writer().println("No prp directory found.");
-            terminal.writer().flush();
+            System.out.println("No prp directory found.");
+            System.out.flush();
             return;
         }
 
@@ -265,12 +235,12 @@ public class AITemplateManager {
                     .collect(Collectors.toList());
 
             if (prps.isEmpty()) {
-                terminal.writer().println("No PRPs found.");
-                terminal.writer().flush();
+                System.out.println("No PRPs found.");
+                System.out.flush();
                 return;
             }
 
-            terminal.writer().println("\nActive PRPs:");
+            System.out.println("\nActive PRPs:");
             for (Path prp : prps) {
                 String fileName = prp.getFileName().toString();
                 Matcher matcher = PRP_PATTERN.matcher(fileName);
@@ -278,28 +248,28 @@ public class AITemplateManager {
                     String index = matcher.group(1);
                     String name = matcher.group(2);
                     String status = fileName.contains(".closed.") ? "[CLOSED]" : "[ACTIVE]";
-                    terminal.writer().println("  " + index + ": " + name + " " + status);
+                    System.out.println("  " + index + ": " + name + " " + status);
                 }
             }
-            terminal.writer().println();
-            terminal.writer().flush();
+            System.out.println();
+            System.out.flush();
 
         } catch (IOException e) {
-            terminal.writer().println("Error listing PRPs: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error listing PRPs: " + e.getMessage());
+            System.out.flush();
         }
     }
 
-    private static void openPRP(Terminal terminal, LineReader lineReader, Settings settings) {
-        terminal.writer().println("\n--- Open PRP ---");
-        terminal.writer().flush();
+    private static void openPRP(Settings settings) {
+        System.out.println("\n--- Open PRP ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path prpDir = currentDir.resolve("prp");
 
         if (!Files.exists(prpDir)) {
-            terminal.writer().println("No prp directory found.");
-            terminal.writer().flush();
+            System.out.println("No prp directory found.");
+            System.out.flush();
             return;
         }
 
@@ -311,19 +281,19 @@ public class AITemplateManager {
                     .collect(Collectors.toList());
 
             if (prps.isEmpty()) {
-                terminal.writer().println("No PRPs found.");
-                terminal.writer().flush();
+                System.out.println("No PRPs found.");
+                System.out.flush();
                 return;
             }
 
-            terminal.writer().println("\nAvailable PRPs:");
+            System.out.println("\nAvailable PRPs:");
             for (int i = 0; i < prps.size(); i++) {
-                terminal.writer().println((i + 1) + ". " + prps.get(i).getFileName().toString());
+                System.out.println((i + 1) + ". " + prps.get(i).getFileName().toString());
             }
-            terminal.writer().println("0. Cancel");
-            terminal.writer().flush();
+            System.out.println("0. Cancel");
+            System.out.flush();
 
-            String choice = lineReader.readLine("Select PRP to open: ").trim();
+            String choice = Prompt.ask("Select PRP to open: ").trim();
             if ("0".equals(choice)) {
                 return;
             }
@@ -331,31 +301,31 @@ public class AITemplateManager {
             int index = Integer.parseInt(choice) - 1;
             if (index >= 0 && index < prps.size()) {
                 Path prpPath = prps.get(index);
-                openInEditor(settings, prpPath, terminal);
+                openInEditor(settings, prpPath);
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
             }
 
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
         } catch (IOException e) {
-            terminal.writer().println("Error opening PRP: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error opening PRP: " + e.getMessage());
+            System.out.flush();
         }
     }
 
-    private static void togglePRPStatus(Terminal terminal, LineReader lineReader) {
-        terminal.writer().println("\n--- Close/Reopen PRP ---");
-        terminal.writer().flush();
+    private static void togglePRPStatus() {
+        System.out.println("\n--- Close/Reopen PRP ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path prpDir = currentDir.resolve("prp");
 
         if (!Files.exists(prpDir)) {
-            terminal.writer().println("No prp directory found.");
-            terminal.writer().flush();
+            System.out.println("No prp directory found.");
+            System.out.flush();
             return;
         }
 
@@ -367,21 +337,21 @@ public class AITemplateManager {
                     .collect(Collectors.toList());
 
             if (prps.isEmpty()) {
-                terminal.writer().println("No PRPs found.");
-                terminal.writer().flush();
+                System.out.println("No PRPs found.");
+                System.out.flush();
                 return;
             }
 
-            terminal.writer().println("\nAvailable PRPs:");
+            System.out.println("\nAvailable PRPs:");
             for (int i = 0; i < prps.size(); i++) {
                 String fileName = prps.get(i).getFileName().toString();
                 String status = fileName.contains(".closed.") ? "[CLOSED]" : "[ACTIVE]";
-                terminal.writer().println((i + 1) + ". " + fileName + " " + status);
+                System.out.println((i + 1) + ". " + fileName + " " + status);
             }
-            terminal.writer().println("0. Cancel");
-            terminal.writer().flush();
+            System.out.println("0. Cancel");
+            System.out.flush();
 
-            String choice = lineReader.readLine("Select PRP to toggle status: ").trim();
+            String choice = Prompt.ask("Select PRP to toggle status: ").trim();
             if ("0".equals(choice)) {
                 return;
             }
@@ -394,28 +364,28 @@ public class AITemplateManager {
 
                 if (fileName.contains(".closed.")) {
                     newFileName = fileName.replace(".closed.", ".");
-                    terminal.writer().println("Reopening PRP...");
+                    System.out.println("Reopening PRP...");
                 } else {
                     newFileName = fileName.replace(".md", ".closed.md");
-                    terminal.writer().println("Closing PRP...");
+                    System.out.println("Closing PRP...");
                 }
 
                 Path newPath = oldPath.getParent().resolve(newFileName);
                 Files.move(oldPath, newPath);
-                terminal.writer().println("PRP renamed to: " + newFileName);
-                terminal.writer().flush();
+                System.out.println("PRP renamed to: " + newFileName);
+                System.out.flush();
 
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
             }
 
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
         } catch (IOException e) {
-            terminal.writer().println("Error toggling PRP status: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error toggling PRP status: " + e.getMessage());
+            System.out.flush();
         }
     }
 
@@ -444,29 +414,29 @@ public class AITemplateManager {
         return indices.stream().max(Integer::compareTo).orElse(0) + 1;
     }
 
-    private static void openInEditor(Settings settings, Path filePath, Terminal terminal) throws IOException {
+    private static void openInEditor(Settings settings, Path filePath) throws IOException {
         String editor = settings.getSingleFileEditor();
         if (editor != null && !editor.isEmpty()) {
             ProcessBuilder pb = new ProcessBuilder(editor, filePath.toString());
             pb.start();
-            terminal.writer().println("Opening in editor: " + filePath.getFileName());
-            terminal.writer().flush();
+            System.out.println("Opening in editor: " + filePath.getFileName());
+            System.out.flush();
         } else {
-            terminal.writer().println("Default editor not configured. File created at: " + filePath);
-            terminal.writer().flush();
+            System.out.println("Default editor not configured. File created at: " + filePath);
+            System.out.flush();
         }
     }
 
-    private static void viewPRPDetails(Terminal terminal, LineReader lineReader) {
-        terminal.writer().println("\n--- View PRP Details ---");
-        terminal.writer().flush();
+    private static void viewPRPDetails() {
+        System.out.println("\n--- View PRP Details ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path prpDir = currentDir.resolve("prp");
 
         if (!Files.exists(prpDir)) {
-            terminal.writer().println("No prp directory found.");
-            terminal.writer().flush();
+            System.out.println("No prp directory found.");
+            System.out.flush();
             return;
         }
 
@@ -478,19 +448,19 @@ public class AITemplateManager {
                     .collect(Collectors.toList());
 
             if (prps.isEmpty()) {
-                terminal.writer().println("No PRPs found.");
-                terminal.writer().flush();
+                System.out.println("No PRPs found.");
+                System.out.flush();
                 return;
             }
 
-            terminal.writer().println("\nAvailable PRPs:");
+            System.out.println("\nAvailable PRPs:");
             for (int i = 0; i < prps.size(); i++) {
-                terminal.writer().println((i + 1) + ". " + prps.get(i).getFileName().toString());
+                System.out.println((i + 1) + ". " + prps.get(i).getFileName().toString());
             }
-            terminal.writer().println("0. Cancel");
-            terminal.writer().flush();
+            System.out.println("0. Cancel");
+            System.out.flush();
 
-            String choice = lineReader.readLine("Select PRP to view: ").trim();
+            String choice = Prompt.ask("Select PRP to view: ").trim();
             if ("0".equals(choice)) {
                 return;
             }
@@ -498,63 +468,63 @@ public class AITemplateManager {
             int index = Integer.parseInt(choice) - 1;
             if (index >= 0 && index < prps.size()) {
                 Path prpPath = prps.get(index);
-                displayPRPContent(terminal, prpPath);
+                displayPRPContent(prpPath);
 
                 String prpIndex = extractPRPIndex(prpPath.getFileName().toString());
                 Path statusPath = prpDir.resolve(prpIndex + "-prp.status.md");
                 if (Files.exists(statusPath)) {
-                    terminal.writer().println();
-                    displayStatusContent(terminal, statusPath);
+                    System.out.println();
+                    displayStatusContent(statusPath);
                 } else {
-                    terminal.writer().println("\n\t[No status file found for this PRP]");
-                    terminal.writer().flush();
+                    System.out.println("\n\t[No status file found for this PRP]");
+                    System.out.flush();
                 }
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
             }
 
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
         } catch (IOException e) {
-            terminal.writer().println("Error viewing PRP: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error viewing PRP: " + e.getMessage());
+            System.out.flush();
         }
     }
 
-    private static void displayPRPContent(Terminal terminal, Path prpPath) throws IOException {
-        terminal.writer().println("\n=== PRP: " + prpPath.getFileName() + " ===");
-        terminal.writer().flush();
+    private static void displayPRPContent(Path prpPath) throws IOException {
+        System.out.println("\n=== PRP: " + prpPath.getFileName() + " ===");
+        System.out.flush();
 
         List<String> lines = Files.readAllLines(prpPath);
         for (String line : lines) {
-            terminal.writer().println("\t" + line);
+            System.out.println("\t" + line);
         }
-        terminal.writer().flush();
+        System.out.flush();
     }
 
-    private static void displayStatusContent(Terminal terminal, Path statusPath) throws IOException {
-        terminal.writer().println("=== STATUS: " + statusPath.getFileName() + " ===");
-        terminal.writer().flush();
+    private static void displayStatusContent(Path statusPath) throws IOException {
+        System.out.println("=== STATUS: " + statusPath.getFileName() + " ===");
+        System.out.flush();
 
         List<String> lines = Files.readAllLines(statusPath);
         for (String line : lines) {
-            terminal.writer().println("\t" + line);
+            System.out.println("\t" + line);
         }
-        terminal.writer().flush();
+        System.out.flush();
     }
 
-    private static void openPRPStatus(Terminal terminal, LineReader lineReader, Settings settings) {
-        terminal.writer().println("\n--- Open PRP Status ---");
-        terminal.writer().flush();
+    private static void openPRPStatus(Settings settings) {
+        System.out.println("\n--- Open PRP Status ---");
+        System.out.flush();
 
         Path currentDir = Paths.get(System.getProperty("user.dir"));
         Path prpDir = currentDir.resolve("prp");
 
         if (!Files.exists(prpDir)) {
-            terminal.writer().println("No prp directory found.");
-            terminal.writer().flush();
+            System.out.println("No prp directory found.");
+            System.out.flush();
             return;
         }
 
@@ -566,23 +536,23 @@ public class AITemplateManager {
                     .collect(Collectors.toList());
 
             if (prps.isEmpty()) {
-                terminal.writer().println("No PRPs found.");
-                terminal.writer().flush();
+                System.out.println("No PRPs found.");
+                System.out.flush();
                 return;
             }
 
-            terminal.writer().println("\nAvailable PRPs:");
+            System.out.println("\nAvailable PRPs:");
             for (int i = 0; i < prps.size(); i++) {
                 String fileName = prps.get(i).getFileName().toString();
                 String prpIndex = extractPRPIndex(fileName);
                 Path statusPath = prpDir.resolve(prpIndex + "-prp.status.md");
                 String statusIndicator = Files.exists(statusPath) ? "" : " [NO STATUS FILE]";
-                terminal.writer().println((i + 1) + ". " + fileName + statusIndicator);
+                System.out.println((i + 1) + ". " + fileName + statusIndicator);
             }
-            terminal.writer().println("0. Cancel");
-            terminal.writer().flush();
+            System.out.println("0. Cancel");
+            System.out.flush();
 
-            String choice = lineReader.readLine("Select PRP status to open: ").trim();
+            String choice = Prompt.ask("Select PRP status to open: ").trim();
             if ("0".equals(choice)) {
                 return;
             }
@@ -593,9 +563,9 @@ public class AITemplateManager {
                 Path statusPath = prpDir.resolve(prpIndex + "-prp.status.md");
 
                 if (!Files.exists(statusPath)) {
-                    terminal.writer().println("Status file does not exist. Create it? (y/n): ");
-                    terminal.writer().flush();
-                    String create = lineReader.readLine().trim();
+                    System.out.println("Status file does not exist. Create it? (y/n): ");
+                    System.out.flush();
+                    String create = Prompt.ask().trim();
                     if (create.equalsIgnoreCase("y")) {
                         String template = "PRP Number: " + prpIndex + "\n" +
                                 "PRP Name: \n" +
@@ -604,25 +574,25 @@ public class AITemplateManager {
                                 "## Completed Tasks\n\n" +
                                 "## Pending Tasks\n\n";
                         Files.writeString(statusPath, template);
-                        terminal.writer().println("Status file created.");
-                        terminal.writer().flush();
+                        System.out.println("Status file created.");
+                        System.out.flush();
                     } else {
                         return;
                     }
                 }
 
-                openInEditor(settings, statusPath, terminal);
+                openInEditor(settings, statusPath);
             } else {
-                terminal.writer().println("Invalid selection.");
-                terminal.writer().flush();
+                System.out.println("Invalid selection.");
+                System.out.flush();
             }
 
         } catch (NumberFormatException e) {
-            terminal.writer().println("Invalid input.");
-            terminal.writer().flush();
+            System.out.println("Invalid input.");
+            System.out.flush();
         } catch (IOException e) {
-            terminal.writer().println("Error opening PRP status: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error opening PRP status: " + e.getMessage());
+            System.out.flush();
         }
     }
 

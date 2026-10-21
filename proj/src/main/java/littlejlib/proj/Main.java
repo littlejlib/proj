@@ -1,10 +1,5 @@
 package littlejlib.proj;
 
-import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
-import org.jline.terminal.Attributes;
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import littlejlib.proj.ui.MainMenuDialog;
@@ -37,6 +32,7 @@ import java.io.IOException;
              Main.ImpactCommand.class,
              Main.BlockedCommand.class,
              Main.CctCommand.class,
+             Main.WsCommand.class,
              Main.ConfigCommand.class,
              littlejlib.proj.cli.ShellCommands.ShellCmd.class,
              littlejlib.proj.cli.AotCommands.AotCmd.class,
@@ -49,8 +45,8 @@ public class Main implements Runnable {
 
     private static Settings settings;
     private static SettingsManager settingsManager;
-    private static Terminal terminal;
-    private static LineReader lineReader;
+    // JLine is gone: see Prompt. It carried a WindowsStreamPump thread that drained the console
+    // input queue, which corrupted every command proj handed back to its shell.
 
     // Cache scanned projects at application level (scan once per run)
     private static java.util.List<String> cachedProjects = null;
@@ -76,7 +72,7 @@ public class Main implements Runnable {
      */
     static void warmUpIfBuildingCache() {
         try {
-            if (!littlejlib.aot.AotState.creating()) return;
+            if (!jarrunner.aot.AotState.creating()) return;
             var err = LogConfig.err();
             err.println("[proj] first run since the jar changed - warming up to build the startup");
             err.println("[proj] cache. This run is slower; the next ones are much faster.");
@@ -86,11 +82,20 @@ public class Main implements Runnable {
         }
     }
 
+    /// SetConsoleOutputCP(65001) in-process, via FFM, then System.out/err in UTF-8. This replaces the
+    /// `chcp 65001` proj.bat used to run before the JVM. Only on Windows: elsewhere the terminal is UTF-8.
     static void enableUnicodeConsole() {
+        if (!System.getProperty("os.name", "").toLowerCase().contains("windows")) return;
         try {
-            xyz.jphil.windows_console_set_unicode_output.WindowsConsoleSetUnicodeOutput.enable();
+            var kernel32 = java.lang.foreign.SymbolLookup.libraryLookup("kernel32", java.lang.foreign.Arena.global());
+            var setOutputCp = java.lang.foreign.Linker.nativeLinker().downcallHandle(
+                    kernel32.find("SetConsoleOutputCP").orElseThrow(),
+                    java.lang.foreign.FunctionDescriptor.of(java.lang.foreign.ValueLayout.JAVA_BOOLEAN, java.lang.foreign.ValueLayout.JAVA_INT));
+            if (!(boolean) setOutputCp.invoke(65001)) return;
+            System.setOut(new java.io.PrintStream(System.out, true, java.nio.charset.StandardCharsets.UTF_8));
+            System.setErr(new java.io.PrintStream(System.err, true, java.nio.charset.StandardCharsets.UTF_8));
         } catch (Throwable t) {
-            // Not Windows, or no console attached. Nothing to do and nothing worth saying.
+            // No console attached, or no native access. Nothing to do and nothing worth saying.
         }
     }
 
@@ -129,7 +134,7 @@ public class Main implements Runnable {
 
         // The training payload, when jr launched us with -XX:AOTCacheOutput. Handled before the
         // terminal and settings so nothing else colours the run.
-        if (args.length > 0 && littlejlib.aot.AotTrainer.WARMUP_FLAG.equals(args[0])) {
+        if (args.length > 0 && jarrunner.aot.AotTrainer.WARMUP_FLAG.equals(args[0])) {
             littlejlib.proj.aot.AotWarmup.run(LogConfig.err());
             System.exit(0);
         }
@@ -169,15 +174,7 @@ public class Main implements Runnable {
             }
         }
 
-        try {
-            terminal = TerminalBuilder.builder()
-                    .system(true)
-                    .build();
-
-            lineReader = LineReaderBuilder.builder()
-                    .terminal(terminal)
-                    .build();
-
+        {
             settingsManager = new SettingsManager();
             settings = settingsManager.loadSettings();
 
@@ -213,10 +210,6 @@ public class Main implements Runnable {
                 System.exit(exitCode);
             }
 
-        } catch (IOException e) {
-            System.err.println("Error initializing terminal: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(3);
         }
     }
 
@@ -242,22 +235,22 @@ public class Main implements Runnable {
 
     private static void handleFirstRun() {
         printBanner();
-        terminal.writer().println("FIRST RUN DETECTED");
-        terminal.writer().println();
-        terminal.writer().println("A template Settings.toml file has been created at:");
-        terminal.writer().println("  " + settingsManager.getSettingsFilePath());
-        terminal.writer().println();
-        terminal.writer().println("Please edit this file to configure:");
-        terminal.writer().println("  - Your code repositories path");
-        terminal.writer().println("  - Default editor");
-        terminal.writer().println("  - Organizations with their groupIds");
-        terminal.writer().println("  - Other preferences");
-        terminal.writer().println();
-        terminal.writer().println("After editing the file, run this program again.");
-        terminal.writer().flush();
+        System.out.println("FIRST RUN DETECTED");
+        System.out.println();
+        System.out.println("A template Settings.toml file has been created at:");
+        System.out.println("  " + settingsManager.getSettingsFilePath());
+        System.out.println();
+        System.out.println("Please edit this file to configure:");
+        System.out.println("  - Your code repositories path");
+        System.out.println("  - Default editor");
+        System.out.println("  - Organizations with their groupIds");
+        System.out.println("  - Other preferences");
+        System.out.println();
+        System.out.println("After editing the file, run this program again.");
+        System.out.flush();
 
         try {
-            String openNow = lineReader.readLine("Open settings file now? (y/n): ").trim();
+            String openNow = Prompt.ask("Open settings file now? (y/n): ").trim();
             if (openNow.equalsIgnoreCase("y")) {
                 openFileWithFallback(settingsManager.getSettingsFilePath().toFile());
             }
@@ -267,12 +260,12 @@ public class Main implements Runnable {
     }
 
     private static void printBanner() {
-        terminal.writer().println("========================================");
-        terminal.writer().println("  Project Build & Dev Tools");
-        terminal.writer().println("  Version 1.0");
-        terminal.writer().println("========================================");
-        terminal.writer().println();
-        terminal.writer().flush();
+        System.out.println("========================================");
+        System.out.println("  Project Build & Dev Tools");
+        System.out.println("  Version 1.0");
+        System.out.println("========================================");
+        System.out.println();
+        System.out.flush();
     }
 
     /**
@@ -281,8 +274,8 @@ public class Main implements Runnable {
      */
     private static void runMenuAction(String action) {
         switch (action) {
-            case "GIT_CLONE" -> GitManager.cloneRepository(terminal, lineReader, settings);
-            case "NEW_PROJECT" -> ProjectManager.createNewProject(terminal, lineReader, settings);
+            case "GIT_CLONE" -> GitManager.cloneRepository(settings);
+            case "NEW_PROJECT" -> ProjectManager.createNewProject(settings);
             case "IDE_EDITOR" -> openCurrentDirInIDE();
             default -> System.err.println("[proj] the daemon asked for an unknown action: " + action);
         }
@@ -298,13 +291,13 @@ public class Main implements Runnable {
                 // point of this window is an option that then cannot open the database.
                 var exitCode = littlejlib.proj.daemon.OpenViaDaemon.open(isVerbose());
                 if (exitCode != null) System.exit(exitCode);
-                ProjectManager.openProject(terminal, lineReader, settings, getCachedProjects());
+                ProjectManager.openProject(settings, getCachedProjects());
                 break;
             case GIT_CLONE:
-                GitManager.cloneRepository(terminal, lineReader, settings);
+                GitManager.cloneRepository(settings);
                 break;
             case NEW_PROJECT:
-                ProjectManager.createNewProject(terminal, lineReader, settings);
+                ProjectManager.createNewProject(settings);
                 break;
             case PRPS_MANAGER:
                 AITemplateManager.manageTemplatesUI(settings);
@@ -322,8 +315,8 @@ public class Main implements Runnable {
             case EXIT:
             default:
                 // Any exit action (BACK from menu, EXIT, or null/default)
-                terminal.writer().println("\nGoodbye!");
-                terminal.writer().flush();
+                System.out.println("\nGoodbye!");
+                System.out.flush();
                 try {
                     Thread.sleep(200);
                 } catch (InterruptedException e) {
@@ -333,105 +326,78 @@ public class Main implements Runnable {
         }
     }
 
+    /** One keypress. Was JLine raw mode, in three identical copies; now one place. */
     private static String readSingleKey() {
-        Attributes originalAttributes = null;
-        try {
-            // Save original attributes before entering raw mode
-            originalAttributes = terminal.getAttributes();
-
-            // Enable raw mode to read single characters
-            terminal.enterRawMode();
-            int c = terminal.reader().read();
-
-            // Handle ESC key
-            if (c == 27) {
-                return "\u001B";
-            }
-
-            return String.valueOf((char) c);
-        } catch (IOException e) {
-            terminal.writer().println("Error reading input: " + e.getMessage());
-            terminal.writer().flush();
-            return "";
-        } finally {
-            // Restore original attributes
-            if (originalAttributes != null) {
-                try {
-                    terminal.setAttributes(originalAttributes);
-                } catch (Exception e) {
-                    // Ignore
-                }
-            }
-        }
+        return Prompt.key();
     }
 
     private static void settingsMenu() {
         while (true) {
-            terminal.writer().println("\n--- Settings ---");
-            terminal.writer().println("Current Settings:");
-            terminal.writer().println("  Code Repos Path: " + settings.getCodeReposPath());
+            System.out.println("\n--- Settings ---");
+            System.out.println("Current Settings:");
+            System.out.println("  Code Repos Path: " + settings.getCodeReposPath());
             String mirrorPath = settings.getGitHubMirrorPath();
-            terminal.writer().println("  GitHub Mirror Path: " + (mirrorPath == null || mirrorPath.isEmpty()
+            System.out.println("  GitHub Mirror Path: " + (mirrorPath == null || mirrorPath.isEmpty()
                     ? "(not set - clones go to Code Repos Path)" : mirrorPath));
-            terminal.writer().println("  Single File Editor: " + settings.getSingleFileEditor());
-            terminal.writer().println("  IDE Launcher: " + settings.getIdeLauncher());
-            terminal.writer().print("  Organizations: ");
+            System.out.println("  Single File Editor: " + settings.getSingleFileEditor());
+            System.out.println("  IDE Launcher: " + settings.getIdeLauncher());
+            System.out.print("  Organizations: ");
             if (settings.getOrganizations().isEmpty()) {
-                terminal.writer().println("(none)");
+                System.out.println("(none)");
             } else {
                 for (Organization org : settings.getOrganizations()) {
-                    terminal.writer().print(org.getName() + " ");
+                    System.out.print(org.getName() + " ");
                 }
-                terminal.writer().println();
+                System.out.println();
             }
-            terminal.writer().println();
-            terminal.writer().println("1. Configure (C)ode Repository Path");
-            terminal.writer().println("2. Configure (G)itHub Mirror Path");
-            terminal.writer().println("3. Configure Project Scanning (D)epth");
-            terminal.writer().println("4. Manage (O)rganizations");
-            terminal.writer().println("5. Configure Single File (E)ditor");
-            terminal.writer().println("6. Configure Project IDE (L)auncher");
-            terminal.writer().println("7. Edit Settings File (R)aw");
-            terminal.writer().println("8. Show Settings (F)ile Location");
-            terminal.writer().println("9. Re(l)oad Settings from File");
-            terminal.writer().println("0. E(x)it to Main Menu (Esc)");
-            terminal.writer().println();
-            terminal.writer().flush();
+            System.out.println();
+            System.out.println("1. Configure (C)ode Repository Path");
+            System.out.println("2. Configure (G)itHub Mirror Path");
+            System.out.println("3. Configure Project Scanning (D)epth");
+            System.out.println("4. Manage (O)rganizations");
+            System.out.println("5. Configure Single File (E)ditor");
+            System.out.println("6. Configure Project IDE (L)auncher");
+            System.out.println("7. Edit Settings File (R)aw");
+            System.out.println("8. Show Settings (F)ile Location");
+            System.out.println("9. Re(l)oad Settings from File");
+            System.out.println("0. E(x)it to Main Menu (Esc)");
+            System.out.println();
+            System.out.flush();
 
             String choice = readSingleKey();
 
             switch (choice.toLowerCase()) {
                 case "1":
                 case "c":
-                    String newPath = lineReader.readLine("Enter new Code Repos Path: ");
+                    String newPath = Prompt.ask("Enter new Code Repos Path: ");
                     settings.setCodeReposPath(newPath);
                     settingsManager.saveSettings(settings);
-                    terminal.writer().println("Settings saved.");
-                    terminal.writer().flush();
+                    System.out.println("Settings saved.");
+                    System.out.flush();
                     break;
                 case "2":
                 case "g":
-                    terminal.writer().println("\nSeparate directory for arbitrary cloned GitHub repos.");
-                    terminal.writer().println("Leave empty to clone into the Code Repos Path instead.");
-                    terminal.writer().flush();
-                    String newMirror = lineReader.readLine("Enter GitHub Mirror Path: ").trim();
+                    System.out.println("\nSeparate directory for arbitrary cloned GitHub repos.");
+                    System.out.println("Leave empty to clone into the Code Repos Path instead.");
+                    System.out.flush();
+                    String newMirror = Prompt.ask("Enter GitHub Mirror Path: ").trim();
                     settings.setGitHubMirrorPath(newMirror);
                     settingsManager.saveSettings(settings);
-                    terminal.writer().println("Settings saved.");
-                    terminal.writer().flush();
+                    System.out.println("Settings saved.");
+                    System.out.flush();
                     break;
                 case "3":
                 case "d":
-                    String depthStr = lineReader.readLine("Enter project scanning depth (current: " + settings.getProjectScanningDepth() + "): ");
+                    String depthStr = Prompt.ask("Enter project scanning depth (current: " + settings.getProjectScanningDepth() + "): ");
                     try {
                         int depth = Integer.parseInt(depthStr.trim());
                         settings.setProjectScanningDepth(depth);
                         settingsManager.saveSettings(settings);
-                        terminal.writer().println("Settings saved.");
+                        System.out.println("Settings saved.");
                     } catch (NumberFormatException e) {
-                        terminal.writer().println("Invalid number. Settings not changed.");
+                        System.out.println("Invalid number. Settings not changed.");
                     }
-                    terminal.writer().flush();
+                    System.out.flush();
                     break;
                 case "4":
                 case "o":
@@ -439,23 +405,23 @@ public class Main implements Runnable {
                     break;
                 case "5":
                 case "e":
-                    String newEditor = lineReader.readLine("Enter Single File Editor (full path): ");
+                    String newEditor = Prompt.ask("Enter Single File Editor (full path): ");
                     settings.setSingleFileEditor(newEditor);
                     settingsManager.saveSettings(settings);
-                    terminal.writer().println("Settings saved.");
-                    terminal.writer().flush();
+                    System.out.println("Settings saved.");
+                    System.out.flush();
                     break;
                 case "6":
                 case "l":
-                    terminal.writer().println("\nEnter IDE Launcher command template.");
-                    terminal.writer().println("Use %PATH% as placeholder for project path.");
-                    terminal.writer().println("Example: C:\\Program Files\\NetBeans\\bin\\netbeans.exe --open \"%PATH%\"");
-                    terminal.writer().flush();
-                    String newLauncher = lineReader.readLine("IDE Launcher: ");
+                    System.out.println("\nEnter IDE Launcher command template.");
+                    System.out.println("Use %PATH% as placeholder for project path.");
+                    System.out.println("Example: C:\\Program Files\\NetBeans\\bin\\netbeans.exe --open \"%PATH%\"");
+                    System.out.flush();
+                    String newLauncher = Prompt.ask("IDE Launcher: ");
                     settings.setIdeLauncher(newLauncher);
                     settingsManager.saveSettings(settings);
-                    terminal.writer().println("Settings saved.");
-                    terminal.writer().flush();
+                    System.out.println("Settings saved.");
+                    System.out.flush();
                     break;
                 case "7":
                 case "r":
@@ -463,26 +429,26 @@ public class Main implements Runnable {
                     break;
                 case "8":
                 case "f":
-                    terminal.writer().println("Settings file: " + settingsManager.getSettingsFilePath());
-                    terminal.writer().flush();
+                    System.out.println("Settings file: " + settingsManager.getSettingsFilePath());
+                    System.out.flush();
                     break;
                 case "9":
                     settings = settingsManager.loadSettings();
                     if (settings == null) {
-                        terminal.writer().println("Error reloading settings. Using previous settings.");
+                        System.out.println("Error reloading settings. Using previous settings.");
                         settings = settingsManager.loadSettings();
                     } else {
-                        terminal.writer().println("Settings reloaded successfully.");
+                        System.out.println("Settings reloaded successfully.");
                     }
-                    terminal.writer().flush();
+                    System.out.flush();
                     break;
                 case "0":
                 case "x":
                 case "\u001B": // ESC key
                     return;
                 default:
-                    terminal.writer().println("Invalid option.");
-                    terminal.writer().flush();
+                    System.out.println("Invalid option.");
+                    System.out.flush();
             }
         }
     }
@@ -502,13 +468,13 @@ public class Main implements Runnable {
             try {
                 ProcessBuilder pb = new ProcessBuilder(editor, file.getAbsolutePath());
                 pb.start();
-                terminal.writer().println("Opening file in configured editor...");
-                terminal.writer().flush();
+                System.out.println("Opening file in configured editor...");
+                System.out.flush();
                 return;
             } catch (Exception e) {
-                terminal.writer().println("WARNING: Failed to open with configured editor: " + e.getMessage());
-                terminal.writer().println("Falling back to system default editor...");
-                terminal.writer().flush();
+                System.out.println("WARNING: Failed to open with configured editor: " + e.getMessage());
+                System.out.println("Falling back to system default editor...");
+                System.out.flush();
             }
         }
 
@@ -518,54 +484,54 @@ public class Main implements Runnable {
                 java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
                 if (desktop.isSupported(java.awt.Desktop.Action.EDIT)) {
                     desktop.edit(file);
-                    terminal.writer().println("Opening file with system default editor...");
-                    terminal.writer().flush();
+                    System.out.println("Opening file with system default editor...");
+                    System.out.flush();
                 } else if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
                     desktop.open(file);
-                    terminal.writer().println("Opening file with system default application...");
-                    terminal.writer().flush();
+                    System.out.println("Opening file with system default application...");
+                    System.out.flush();
                 } else {
-                    terminal.writer().println("ERROR: No way to open file - Desktop API not supported.");
-                    terminal.writer().println("File location: " + file.getAbsolutePath());
-                    terminal.writer().flush();
+                    System.out.println("ERROR: No way to open file - Desktop API not supported.");
+                    System.out.println("File location: " + file.getAbsolutePath());
+                    System.out.flush();
                 }
             } else {
-                terminal.writer().println("ERROR: Desktop API not supported on this system.");
-                terminal.writer().println("File location: " + file.getAbsolutePath());
-                terminal.writer().flush();
+                System.out.println("ERROR: Desktop API not supported on this system.");
+                System.out.println("File location: " + file.getAbsolutePath());
+                System.out.flush();
             }
         } catch (Exception e) {
-            terminal.writer().println("ERROR: Failed to open file: " + e.getMessage());
-            terminal.writer().println("File location: " + file.getAbsolutePath());
-            terminal.writer().flush();
+            System.out.println("ERROR: Failed to open file: " + e.getMessage());
+            System.out.println("File location: " + file.getAbsolutePath());
+            System.out.flush();
         }
     }
 
     private static void manageOrganizations() {
         while (true) {
-            terminal.writer().println("\n--- Manage Organizations ---");
-            terminal.writer().println("Current Organizations:");
+            System.out.println("\n--- Manage Organizations ---");
+            System.out.println("Current Organizations:");
             for (int i = 0; i < settings.getOrganizations().size(); i++) {
                 Organization org = settings.getOrganizations().get(i);
-                terminal.writer().println((i + 1) + ". " + org.getName() + " (groupId: " + org.getGroupId() + ")");
+                System.out.println((i + 1) + ". " + org.getName() + " (groupId: " + org.getGroupId() + ")");
             }
-            terminal.writer().println();
-            terminal.writer().println("1. (A)dd Organization");
-            terminal.writer().println("2. (E)dit Organization");
-            terminal.writer().println("3. (R)emove Organization");
-            terminal.writer().println("0. E(x)it (Esc)");
-            terminal.writer().println();
-            terminal.writer().flush();
+            System.out.println();
+            System.out.println("1. (A)dd Organization");
+            System.out.println("2. (E)dit Organization");
+            System.out.println("3. (R)emove Organization");
+            System.out.println("0. E(x)it (Esc)");
+            System.out.println();
+            System.out.flush();
 
             String choice = readSingleKey();
 
             switch (choice.toLowerCase()) {
                 case "1":
                 case "a":
-                    String newOrgName = lineReader.readLine("Enter organization name: ").trim();
+                    String newOrgName = Prompt.ask("Enter organization name: ").trim();
                     if (newOrgName.isEmpty()) {
-                        terminal.writer().println("Organization name cannot be empty.");
-                        terminal.writer().flush();
+                        System.out.println("Organization name cannot be empty.");
+                        System.out.flush();
                         break;
                     }
 
@@ -578,81 +544,81 @@ public class Main implements Runnable {
                     }
 
                     if (exists) {
-                        terminal.writer().println("Organization already exists.");
-                        terminal.writer().flush();
+                        System.out.println("Organization already exists.");
+                        System.out.flush();
                         break;
                     }
 
-                    String newGroupId = lineReader.readLine("Enter Maven groupId (e.g., io.github." + newOrgName + "): ").trim();
+                    String newGroupId = Prompt.ask("Enter Maven groupId (e.g., io.github." + newOrgName + "): ").trim();
                     if (newGroupId.isEmpty()) {
                         newGroupId = "io.github." + newOrgName;
                     }
 
                     settings.getOrganizations().add(new Organization(newOrgName, newGroupId));
                     settingsManager.saveSettings(settings);
-                    terminal.writer().println("Organization added.");
-                    terminal.writer().flush();
+                    System.out.println("Organization added.");
+                    System.out.flush();
                     break;
 
                 case "2":
                 case "e":
                     if (settings.getOrganizations().isEmpty()) {
-                        terminal.writer().println("No organizations to edit.");
-                        terminal.writer().flush();
+                        System.out.println("No organizations to edit.");
+                        System.out.flush();
                         break;
                     }
 
-                    String editIndexStr = lineReader.readLine("Enter organization number to edit: ");
+                    String editIndexStr = Prompt.ask("Enter organization number to edit: ");
                     try {
                         int editIndex = Integer.parseInt(editIndexStr) - 1;
                         if (editIndex >= 0 && editIndex < settings.getOrganizations().size()) {
                             Organization orgToEdit = settings.getOrganizations().get(editIndex);
 
-                            terminal.writer().println("Current name: " + orgToEdit.getName());
-                            String newName = lineReader.readLine("Enter new name (or press Enter to keep): ").trim();
+                            System.out.println("Current name: " + orgToEdit.getName());
+                            String newName = Prompt.ask("Enter new name (or press Enter to keep): ").trim();
                             if (!newName.isEmpty()) {
                                 orgToEdit.setName(newName);
                             }
 
-                            terminal.writer().println("Current groupId: " + orgToEdit.getGroupId());
-                            String newGid = lineReader.readLine("Enter new groupId (or press Enter to keep): ").trim();
+                            System.out.println("Current groupId: " + orgToEdit.getGroupId());
+                            String newGid = Prompt.ask("Enter new groupId (or press Enter to keep): ").trim();
                             if (!newGid.isEmpty()) {
                                 orgToEdit.setGroupId(newGid);
                             }
 
                             settingsManager.saveSettings(settings);
-                            terminal.writer().println("Organization updated.");
+                            System.out.println("Organization updated.");
                         } else {
-                            terminal.writer().println("Invalid number.");
+                            System.out.println("Invalid number.");
                         }
                     } catch (NumberFormatException e) {
-                        terminal.writer().println("Invalid input.");
+                        System.out.println("Invalid input.");
                     }
-                    terminal.writer().flush();
+                    System.out.flush();
                     break;
 
                 case "3":
                 case "r":
                     if (settings.getOrganizations().isEmpty()) {
-                        terminal.writer().println("No organizations to remove.");
-                        terminal.writer().flush();
+                        System.out.println("No organizations to remove.");
+                        System.out.flush();
                         break;
                     }
 
-                    String removeIndexStr = lineReader.readLine("Enter organization number to remove: ");
+                    String removeIndexStr = Prompt.ask("Enter organization number to remove: ");
                     try {
                         int removeIndex = Integer.parseInt(removeIndexStr) - 1;
                         if (removeIndex >= 0 && removeIndex < settings.getOrganizations().size()) {
                             settings.getOrganizations().remove(removeIndex);
                             settingsManager.saveSettings(settings);
-                            terminal.writer().println("Organization removed.");
+                            System.out.println("Organization removed.");
                         } else {
-                            terminal.writer().println("Invalid number.");
+                            System.out.println("Invalid number.");
                         }
                     } catch (NumberFormatException e) {
-                        terminal.writer().println("Invalid input.");
+                        System.out.println("Invalid input.");
                     }
-                    terminal.writer().flush();
+                    System.out.flush();
                     break;
 
                 case "0":
@@ -661,8 +627,8 @@ public class Main implements Runnable {
                     break; // Return to main menu
 
                 default:
-                    terminal.writer().println("Invalid option.");
-                    terminal.writer().flush();
+                    System.out.println("Invalid option.");
+                    System.out.flush();
             }
         }
     }
@@ -674,18 +640,18 @@ public class Main implements Runnable {
         String ideLauncher = settings.getIdeLauncher();
 
         if (ideLauncher == null || ideLauncher.isEmpty()) {
-            terminal.writer().println("ERROR: IDE Launcher not configured in settings.");
-            terminal.writer().println("Please configure it in Settings menu (option 5).");
-            terminal.writer().flush();
+            System.out.println("ERROR: IDE Launcher not configured in settings.");
+            System.out.println("Please configure it in Settings menu (option 5).");
+            System.out.flush();
             return;
         }
 
         try {
             String currentDir = System.getProperty("user.dir");
-            terminal.writer().println("\n--- Open in IDE ---");
-            terminal.writer().println("Current directory: " + currentDir);
-            terminal.writer().println("Opening in IDE...");
-            terminal.writer().flush();
+            System.out.println("\n--- Open in IDE ---");
+            System.out.println("Current directory: " + currentDir);
+            System.out.println("Opening in IDE...");
+            System.out.flush();
 
             // Replace %PATH% placeholder with current directory
             String command = ideLauncher.replace("%PATH%", currentDir);
@@ -693,20 +659,20 @@ public class Main implements Runnable {
             // Parse and execute command
             String[] parts = parseCommand(command);
             if (parts.length == 0) {
-                terminal.writer().println("ERROR: Invalid IDE launcher command.");
-                terminal.writer().flush();
+                System.out.println("ERROR: Invalid IDE launcher command.");
+                System.out.flush();
                 return;
             }
 
             ProcessBuilder pb = new ProcessBuilder(parts);
             pb.start();
 
-            terminal.writer().println("✓ Opened current directory in IDE.");
-            terminal.writer().flush();
+            System.out.println("✓ Opened current directory in IDE.");
+            System.out.flush();
 
         } catch (Exception e) {
-            terminal.writer().println("ERROR: Failed to open IDE: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("ERROR: Failed to open IDE: " + e.getMessage());
+            System.out.flush();
         }
     }
 
@@ -775,7 +741,7 @@ public class Main implements Runnable {
                         System.exit(exitCode);
                     }
                 }
-                ProjectManager.openProject(terminal, lineReader, settings, getCachedProjects());
+                ProjectManager.openProject(settings, getCachedProjects());
             } catch (Exception e) {
                 System.err.println("Error opening project: " + e.getMessage());
                 e.printStackTrace();
@@ -789,7 +755,7 @@ public class Main implements Runnable {
         @Override
         public void run() {
             try {
-                ProjectManager.createNewProject(terminal, lineReader, settings);
+                ProjectManager.createNewProject(settings);
             } catch (Exception e) {
                 System.err.println("Error creating new project: " + e.getMessage());
                 e.printStackTrace();
@@ -812,6 +778,8 @@ public class Main implements Runnable {
                  littlejlib.proj.cli.PrpCommands.ListCmd.class,
                  littlejlib.proj.cli.PrpCommands.ShowCmd.class,
                  littlejlib.proj.cli.PrpCommands.AgentCmd.class,
+                 littlejlib.proj.cli.PrpResumeCmd.class,
+                 littlejlib.proj.cli.PrpKeyCmd.class,
                  littlejlib.proj.cli.PrpCommands.PromptCmd.class,
                  littlejlib.proj.cli.PrpCommands.LogsCmd.class,
                  littlejlib.proj.cli.PrpCommands.InstructionsCmd.class,
@@ -947,6 +915,21 @@ public class Main implements Runnable {
         java.util.List<String> args = new java.util.ArrayList<>();
 
         String verb() { return "blocked"; }
+
+        java.util.List<String> arguments() { return args; }
+    }
+
+    /**
+     * The non-code groups: {@code proj ws list|scan}. Query-backed like every other index question,
+     * so it reaches the daemon when one is running and opens the database itself when none is.
+     */
+    @Command(name = "ws", aliases = {"workspace"},
+             description = "Folders that carry PRPs, in the groups configured as 'plain' (list, scan)")
+    static class WsCommand extends QueryBackedCommand {
+        @picocli.CommandLine.Unmatched
+        java.util.List<String> args = new java.util.ArrayList<>();
+
+        String verb() { return "ws"; }
 
         java.util.List<String> arguments() { return args; }
     }
@@ -1163,6 +1146,10 @@ public class Main implements Runnable {
             System.out.println("  prp agent <n>    Open a terminal at the PROJECT root running a coding");
             System.out.println("                   agent on that PRP   --dir --print   (alias: prp claude)");
             System.out.println("  prp new <name> --agent    create it and start the agent in one step");
+            System.out.println("  prp resume [n]    Resume the conversation that PRP already had");
+            System.out.println("                   --list --session <id> --fork --print --remember --dir");
+            System.out.println("  prp key [name]   This project's short name, so PRP 38 reads");
+            System.out.println("                   billing-38 - a ticket id   --dir");
             System.out.println("  prp dir          Print the prp folder these act on   --dir");
             System.out.println();
             System.out.println("  term, t       Open your terminal in a directory   [dir] --which");

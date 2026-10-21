@@ -32,6 +32,7 @@ public final class SettingsCodec {
             AGENT_COMMAND = "agentCommand",
             AGENT_SKIP_PERMISSIONS = "agentSkipPermissions",
             AGENT_LOGS_TAIL_PERCENT = "agentLogsTailPercent",
+            WORKSPACE_REFRESH_MINUTES = "workspaceRefreshMinutes",
             GLOBAL_HOTKEY = "globalHotkey",
             PRP_TEMPLATE = "prpTemplateSrc",
             STATUS_TEMPLATE = "statusTemplate",
@@ -39,6 +40,7 @@ public final class SettingsCodec {
             IDE = "ide",
             TERMINAL = "terminal",
             ORG = "org",
+            GROUP = "group",
             PICKER_COLUMN_ORDER = "pickerColumns.order",
             PICKER_COLUMNS_HIDDEN = "pickerColumns.hidden";
 
@@ -54,6 +56,8 @@ public final class SettingsCodec {
         s.setAgentCommand(Toml.str(map, AGENT_COMMAND));
         s.setAgentSkipPermissions(Toml.bool(map, AGENT_SKIP_PERMISSIONS, false));
         s.setAgentLogsTailPercent(Toml.integer(map, AGENT_LOGS_TAIL_PERCENT, 10));
+        s.setWorkspaceRefreshMinutes(Toml.integer(map, WORKSPACE_REFRESH_MINUTES,
+                littlejlib.proj.workspace.WorkspaceRefresh.DEFAULT_MINUTES));
         // orKeep, so an absent line means the default rather than "off" - the two are different
         // answers and only one of them is what a file that has never mentioned the key is saying.
         s.setGlobalHotkey(orKeep(Toml.str(map, GLOBAL_HOTKEY), s.getGlobalHotkey()));
@@ -104,6 +108,8 @@ public final class SettingsCodec {
         }
         s.setOrganizations(orgs);
 
+        s.setProjectGroups(readGroups(map));
+
         s.setPickerColumnOrder(Toml.list(map, PICKER_COLUMN_ORDER));
         s.setPickerHiddenColumns(Toml.list(map, PICKER_COLUMNS_HIDDEN));
 
@@ -124,6 +130,46 @@ public final class SettingsCodec {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /**
+     * {@code group.<slug>.label} / {@code .kind} / {@code .depth} / {@code .paths}.
+     * <p>
+     * The code group is deliberately NOT read from here - it is derived from the {@code codebase.*}
+     * lines by {@link littlejlib.proj.group.Groups}, so an existing settings file keeps working and
+     * nothing has to be restated under a second key. A {@code group.code.label} line is honoured for
+     * its label alone, which is how the first tab gets renamed.
+     */
+    static List<littlejlib.proj.group.ProjectGroup> readGroups(Map<String, Object> map) {
+        var bySlug = new java.util.LinkedHashMap<String, littlejlib.proj.group.ProjectGroup>();
+        for (var child : Toml.childrenOf(map, GROUP)) {
+            var cut = child.lastIndexOf('.');
+            if (cut < 0) continue;
+            var slug = child.substring(0, cut);
+            if (slug.isBlank() || bySlug.containsKey(slug)) continue;
+            var prefix = GROUP + "." + slug + ".";
+            var g = new littlejlib.proj.group.ProjectGroup();
+            g.slug(slug)
+                    .label(orKeep(Toml.str(map, prefix + "label"), slug))
+                    .kind(orKeep(Toml.str(map, prefix + "kind"),
+                            littlejlib.proj.group.GroupKind.PLAIN.slug()))
+                    .depth(Toml.integer(map, prefix + "depth", 3))
+                    .paths(new ArrayList<>(Toml.list(map, prefix + "paths")));
+            bySlug.put(slug, g);
+        }
+        return new ArrayList<>(bySlug.values());
+    }
+
+    static littlejlib.proj.group.ProjectGroup group(Settings s, String slug, boolean create) {
+        var list = s.getProjectGroups();
+        for (var g : list) if (slug.equalsIgnoreCase(g.slug())) return g;
+        if (!create) return null;
+        var g = new littlejlib.proj.group.ProjectGroup();
+        g.slug(slug).label(slug);
+        var grown = new ArrayList<>(list);
+        grown.add(g);
+        s.setProjectGroups(grown);
+        return g;
+    }
+
     // ---------- key-addressable access, for the command line ----------
 
     /**
@@ -140,6 +186,7 @@ public final class SettingsCodec {
     /** True when this key holds a list, and so is edited with add/remove rather than set. */
     public static boolean isListKey(String key) {
         return key != null && (key.startsWith(CODEBASE + ".")
+                || (key.startsWith(GROUP + ".") && key.endsWith(".paths"))
                 || PICKER_COLUMN_ORDER.equals(key) || PICKER_COLUMNS_HIDDEN.equals(key));
     }
 
@@ -200,6 +247,15 @@ public final class SettingsCodec {
                 }
                 return true;
             }
+            case WORKSPACE_REFRESH_MINUTES -> {
+                try {
+                    s.setWorkspaceRefreshMinutes(Integer.parseInt(value.trim()));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException(WORKSPACE_REFRESH_MINUTES
+                            + " must be a whole number of minutes, or 0 for off, not '" + value + "'");
+                }
+                return true;
+            }
             case PRP_TEMPLATE -> {
                 s.setPrpTemplateSrc(value);
                 return true;
@@ -239,6 +295,37 @@ public final class SettingsCodec {
             list.removeIf(l -> name.equalsIgnoreCase(l.getName()));
             list.add(new IdeLauncher(name, value));
             s.setIdeLaunchers(list);
+            return true;
+        }
+
+        if (key.startsWith(GROUP + ".")) {
+            var rest = key.substring(GROUP.length() + 1);
+            var cut = rest.lastIndexOf('.');
+            if (cut < 0) return false;
+            var slug = rest.substring(0, cut);
+            var field = rest.substring(cut + 1);
+            if (slug.isBlank()) return false;
+            var g = group(s, slug, true);
+            switch (field) {
+                case "label" -> g.label(value);
+                case "kind" -> {
+                    var k = littlejlib.proj.group.GroupKind.parse(value, null);
+                    if (k == null) throw new IllegalArgumentException(
+                            key + " must be 'code' or 'plain', not '" + value + "'");
+                    g.groupKind(k);
+                }
+                case "paths" -> g.paths(new ArrayList<>(values));
+                case "depth" -> {
+                    try {
+                        g.depth(Integer.parseInt(value.trim()));
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException(key + " must be a whole number, not '" + value + "'");
+                    }
+                }
+                default -> {
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -299,6 +386,10 @@ public final class SettingsCodec {
                 s.setAgentLogsTailPercent(10);
                 return true;
             }
+            case WORKSPACE_REFRESH_MINUTES -> {
+                s.setWorkspaceRefreshMinutes(littlejlib.proj.workspace.WorkspaceRefresh.DEFAULT_MINUTES);
+                return true;
+            }
             case GLOBAL_HOTKEY -> {
                 s.setGlobalHotkey(littlejlib.proj.util.GlobalHotkey.DEFAULT);
                 return true;
@@ -316,6 +407,31 @@ public final class SettingsCodec {
             var list = new ArrayList<>(s.getIdeLaunchers());
             var removed = list.removeIf(l -> name.equalsIgnoreCase(l.getName()));
             s.setIdeLaunchers(list);
+            return removed;
+        }
+
+        if (key.startsWith(GROUP + ".")) {
+            var rest = key.substring(GROUP.length() + 1);
+            // A field clears that field; a bare slug removes the whole group, the way a terminal does.
+            var cut = rest.lastIndexOf('.');
+            if (cut > 0 && !rest.endsWith(".")) {
+                var field = rest.substring(cut + 1);
+                var g = group(s, rest.substring(0, cut), false);
+                if (g == null) return false;
+                switch (field) {
+                    case "label" -> g.label("");
+                    case "kind" -> g.groupKind(littlejlib.proj.group.GroupKind.PLAIN);
+                    case "depth" -> g.depth(3);
+                    case "paths" -> g.paths(new ArrayList<>());
+                    default -> {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            var list = new ArrayList<>(s.getProjectGroups());
+            var removed = list.removeIf(g -> rest.equalsIgnoreCase(g.slug()));
+            s.setProjectGroups(list);
             return removed;
         }
 
@@ -457,6 +573,33 @@ public final class SettingsCodec {
                 s.getGlobalHotkey() == null || s.getGlobalHotkey().isBlank()
                         ? littlejlib.proj.util.GlobalHotkey.DEFAULT : s.getGlobalHotkey()))
            .append('\n');
+        out.append('\n');
+
+        out.append("# ---- groups -----------------------------------------------------------------\n");
+        out.append("# One tab in the picker per group. The CODE group is the 'codebase.' lines above\n");
+        out.append("# and is not repeated here; write group.code.label to rename its tab.\n");
+        out.append("# A 'plain' group holds folders that carry a prp directory and nothing is assumed\n");
+        out.append("# to build in them - a case folder, a book, a video edit. Each of its paths gets\n");
+        out.append("# its own tick box in that tab.\n");
+        out.append("#   group.<slug>.label = 'Legal'\n");
+        out.append("#   group.<slug>.kind  = plain | code\n");
+        out.append("#   group.<slug>.depth = how many levels below each path to look for prp folders\n");
+        out.append("#   group.<slug>.paths = [ '...' ]\n");
+        for (var g : s.getProjectGroups()) {
+            if (g.slug() == null || g.slug().isBlank()) continue;
+            out.append(Toml.line(Toml.dotted(GROUP, g.slug(), "label"), nz(g.label()))).append('\n');
+            out.append(Toml.line(Toml.dotted(GROUP, g.slug(), "kind"), g.groupKind().slug())).append('\n');
+            out.append(Toml.line(Toml.dotted(GROUP, g.slug(), "depth"), (long) g.depth())).append('\n');
+            out.append(Toml.line(Toml.dotted(GROUP, g.slug(), "paths"), g.paths())).append('\n');
+        }
+        out.append("# How often a plain group re-walks its own bases, in minutes. Those bases are a\n");
+        out.append("# network filesystem - Google Drive's virtual one - so there is no change event to\n");
+        out.append("# receive and no watcher to hang off, which leaves a clock. 0 switches the clock\n");
+        out.append("# off and leaves the Refresh button and F12; anything under "
+                + littlejlib.proj.workspace.WorkspaceRefresh.MIN_MINUTES + " is read as "
+                + littlejlib.proj.workspace.WorkspaceRefresh.MIN_MINUTES + ".\n");
+        out.append(Toml.line(Toml.dotted(WORKSPACE_REFRESH_MINUTES),
+                (long) s.getWorkspaceRefreshMinutes())).append('\n');
         out.append('\n');
 
         out.append("# ---- editors and IDEs -------------------------------------------------------\n");

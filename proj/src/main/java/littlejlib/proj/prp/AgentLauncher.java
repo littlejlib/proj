@@ -32,7 +32,8 @@ public final class AgentLauncher {
      * setting. It is a placeholder rather than baked into the string so that turning it off does not
      * require editing a command line by hand and getting the quoting right.
      */
-    public static final String DEFAULT_AGENT_COMMAND = "claude %FLAGS% \"%PROMPT%\"";
+    public static final String DEFAULT_AGENT_COMMAND =
+            "claude %FLAGS% --session-id %SESSION% --name \"%NAME%\" \"%PROMPT%\"";
 
     /**
      * What the default used to be, kept so that an existing settings file is not stuck with it.
@@ -40,18 +41,30 @@ public final class AgentLauncher {
      * A configured value always wins over the default - that is the point of configuring one. But
      * every settings file written before this change carries the OLD default verbatim, having never
      * been edited by anyone, and treating that as a deliberate choice would mean the new prompt
-     * reached nobody who had ever run the tool. So this exact string reads as "not configured".
+     * reached nobody who had ever run the tool. So these exact strings read as "not configured".
      */
-    public static final String LEGACY_AGENT_COMMAND = "claude \"@%PRP% read this PRP and let us begin\"";
+    public static final java.util.Set<String> LEGACY_AGENT_COMMANDS = java.util.Set.of(
+            "claude \"@%PRP% read this PRP and let us begin\"",
+            "claude %FLAGS% \"%PROMPT%\"");
 
-    /** The template actually in force: the configured one, unless it is blank or the old default. */
+    /** The template actually in force: the configured one, unless it is blank or an old default. */
     public static String templateOf(Settings settings) {
         var configured = settings == null ? null : settings.getAgentCommand();
-        return isBlank(configured) || LEGACY_AGENT_COMMAND.equals(configured.trim())
+        return isBlank(configured) || LEGACY_AGENT_COMMANDS.contains(configured.trim())
                 ? DEFAULT_AGENT_COMMAND : configured;
     }
 
-    public record Launch(Path projectDir, Path prpFile, String relativePrp, String command) { }
+    /**
+     * The id the session will have. Minted here rather than discovered afterwards: claude-code takes
+     * {@code --session-id}, so the PRP-to-conversation link can be exact from the first moment
+     * instead of being reconstructed later from what the first prompt happened to say.
+     */
+    public static String newSessionId() {
+        return java.util.UUID.randomUUID().toString();
+    }
+
+    public record Launch(Path projectDir, Path prpFile, String relativePrp, String command,
+                         String sessionId, String tabName) { }
 
     /**
      * Works out what would be run, without running it. Separated so the caller can show the command
@@ -60,9 +73,14 @@ public final class AgentLauncher {
      * @param prpFile the PRP document; its project root is derived by stepping out of prp/
      */
     public static Launch plan(Path prpFile, Settings settings) {
+        return plan(prpFile, settings, newSessionId(), PrpSessions.tabName(prpFile));
+    }
+
+    public static Launch plan(Path prpFile, Settings settings, String sessionId, String tabName) {
         var project = projectRootOf(prpFile);
+        var percent = settings == null ? 10 : settings.getAgentLogsTailPercent();
         return new Launch(project, prpFile, relativise(project, prpFile),
-                PrpPrompt.command(prpFile, settings));
+                PrpPrompt.command(prpFile, settings, percent, sessionId, tabName), sessionId, tabName);
     }
 
     public static boolean launch(Path prpFile, Settings settings) {
@@ -76,9 +94,25 @@ public final class AgentLauncher {
      *                 who can see three terminals installed and knows which one this job wants.
      */
     public static boolean launch(Path prpFile, Settings settings, littlejlib.proj.TerminalLauncher terminal) {
-        var plan = plan(prpFile, settings);
-        return TerminalRunner.runIn(terminal, plan.projectDir(), plan.command(),
-                "prp-" + plan.prpFile().getFileName(), settings);
+        return launch(plan(prpFile, settings), settings, terminal);
+    }
+
+    /** Launching a plan ALREADY MADE, so the session id that was recorded is the one that runs. */
+    public static boolean launch(Launch plan, Settings settings, littlejlib.proj.TerminalLauncher terminal) {
+        return start(plan, settings, terminal, false).opened();
+    }
+
+    /**
+     * The same, saying WHERE it went. {@code QUEUED} means it will run in the caller's own terminal
+     * once the caller exits, which is a thing the caller has to know rather than guess.
+     *
+     * @param newTerminal open a tab rather than using the terminal this was typed in
+     */
+    public static littlejlib.proj.terminal.RunOutcome start(
+            Launch plan, Settings settings, littlejlib.proj.TerminalLauncher terminal,
+            boolean newTerminal) {
+        return TerminalRunner.outcomeOf(terminal, plan.projectDir(), plan.command(),
+                "prp-" + plan.prpFile().getFileName(), settings, plan.tabName(), newTerminal);
     }
 
     /**

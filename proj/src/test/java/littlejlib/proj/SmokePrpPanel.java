@@ -59,7 +59,10 @@ public class SmokePrpPanel {
 
     static void write(File out, Path project) throws Exception {
         var settings = new SettingsManager().loadSettings();
-        var panel = new PrpPanel(settings, false, () -> { });
+        // GLOBAL mode when the file name says so, because that is the list where a row has to
+        // identify its own project and where the ticket therefore has to be readable.
+        var global = out.getName().contains("global");
+        var panel = new PrpPanel(settings, global, global ? null : () -> { });
 
         var entries = GlobalPrpEntry.forProject(project);
         System.out.println(entries.size() + " PRPs read from " + project.resolve("prp"));

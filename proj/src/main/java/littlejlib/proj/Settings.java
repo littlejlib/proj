@@ -27,6 +27,12 @@ public class Settings {
     private String statusTemplate;
     private List<String> pickerColumnOrder;   // PickerColumn ids, left to right; empty means the built-in order
     private List<String> pickerHiddenColumns; // PickerColumn ids to start hidden; empty means each column's default
+    // Non-code groups. The code group is derived from codeRepoBases and is never stored here, so an
+    // existing settings file keeps working and this key family is purely additive - see group/Groups.
+    private List<littlejlib.proj.group.ProjectGroup> projectGroups;
+    // How often a plain group is re-walked on its own. A plain base is a network filesystem with no
+    // watcher to hang off, so a clock is what is left. 0 switches it off and leaves only Refresh.
+    private int workspaceRefreshMinutes = littlejlib.proj.workspace.WorkspaceRefresh.DEFAULT_MINUTES;
 
     public Settings() {
         this.additionalCodeReposPaths = new ArrayList<>();
@@ -36,6 +42,7 @@ public class Settings {
         this.organizations = new ArrayList<>();
         this.pickerColumnOrder = new ArrayList<>();
         this.pickerHiddenColumns = new ArrayList<>();
+        this.projectGroups = new ArrayList<>();
         this.prpTemplateSrc = PRPTemplateLoader.DEFAULT_TEMPLATE_SRC; // Default GitHub Pages URL
         this.statusTemplate = "PRP Number: %index%\n" +
                 "PRP Name: %name%\n" +
@@ -145,6 +152,15 @@ public class Settings {
         this.codeRepoBases = bases == null ? new ArrayList<>() : bases;
     }
 
+    /** Non-code groups only. The code group is derived - see {@link littlejlib.proj.group.Groups}. */
+    public List<littlejlib.proj.group.ProjectGroup> getProjectGroups() {
+        return projectGroups;
+    }
+
+    public void setProjectGroups(List<littlejlib.proj.group.ProjectGroup> groups) {
+        this.projectGroups = groups == null ? new ArrayList<>() : groups;
+    }
+
     public List<CodeRepoBase> getExplicitCodeRepoBases() {
         return codeRepoBases;
     }
@@ -243,6 +259,15 @@ public class Settings {
     /** Clamped rather than validated: 0 is "do not mention the log" and 100 is "read all of it". */
     public void setAgentLogsTailPercent(int percent) {
         this.agentLogsTailPercent = Math.max(0, Math.min(100, percent));
+    }
+
+    public int getWorkspaceRefreshMinutes() {
+        return workspaceRefreshMinutes;
+    }
+
+    /** Negative is meaningless; 0 stays 0, which is how the automatic half is switched off. */
+    public void setWorkspaceRefreshMinutes(int minutes) {
+        this.workspaceRefreshMinutes = Math.max(0, minutes);
     }
 
     public List<Organization> getOrganizations() {

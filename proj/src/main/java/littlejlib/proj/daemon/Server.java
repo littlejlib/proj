@@ -42,6 +42,7 @@ public class Server {
     final Object queryLock = new Object();
 
     final TrayUi tray = new TrayUi();
+    final WorkspaceAutoRefresh workspaces = new WorkspaceAutoRefresh();
 
     ServerSocket serverSocket;
     ProjectWatcher watcher;
@@ -53,23 +54,33 @@ public class Server {
         serverSocket = new ServerSocket(0, 16, InetAddress.getLoopbackAddress());
         var info = new Info(serverSocket.getLocalPort(), ProcessHandle.current().pid(), Build.STAMP);
         info.write();
-        log("listening on 127.0.0.1:" + info.port + "  build " + Build.STAMP);
+        mark("listening on 127.0.0.1:" + info.port + "  build " + Build.STAMP);
 
         DB.get();
+        mark("database open");
         JavaFXManager.getInstance().ensurePlatformInitialized();
+        mark("javafx platform initialized");
+        // Registering the watcher is now backgrounded - see startWatcher - so this marks only that
+        // it was handed off, not that ~11,700 directories are already being watched.
         startWatcher();
+        mark("watcher registration handed off");
 
         // Build the picker window now, hidden. Measured: the first Stage plus Scene costs about
-        // four seconds even with the platform already up, and paying that at startup is the
-        // difference between a daemon that helps and one that merely exists.
+        // two to four seconds even with the platform already up, and paying that at startup is the
+        // difference between a daemon that helps and one that merely exists. A client that arrives
+        // before this finishes still queues behind it on the FX thread - see PickerHost.prewarm's
+        // own timing line for how much of the first-ever "open" this actually costs.
         var settings = new SettingsManager().loadSettings();
         if (settings != null) PickerHost.prewarm(browsePaths(settings), settings);
+        mark("prewarm scheduled");
 
         tray.install(() -> new Thread(this::openPickerStandalone, "Tray-Open").start(),
                 () -> new Thread(this::rescanAll, "Tray-Rescan").start(),
                 this::shutdown);
         installSummonKey(settings);
+        workspaces.start();
         tray.note("ready");
+        mark("accepting requests");
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::cleanup, "proj-daemon-shutdown"));
 
@@ -81,6 +92,11 @@ public class Server {
                 if (running) log("accept failed: " + e.getMessage());
             }
         }
+    }
+
+    static void mark(String what) {
+        log(what + "   +" + littlejlib.proj.util.Boot.ms() + "ms");
+        System.out.flush();
     }
 
     void serve(java.net.Socket socket) {
@@ -137,8 +153,9 @@ public class Server {
         if (settings == null) return Response.error(3, "no settings; run proj once in a terminal to create them");
 
         tray.note("picker open");
-        log("picker open" + (tab == null ? "" : " on tab " + tab));
+        mark("picker open requested" + (tab == null ? "" : " on tab " + tab));
         var result = ProjectPickerDialog.show(browsePaths(settings), settings, tab);
+        mark("picker window closed");
         tray.note("ready");
 
         if (result == null || result.absolutePath() == null) return Response.ok("Selection cancelled.");
@@ -228,6 +245,14 @@ public class Server {
     void rescanAll() {
         tray.note("rescanning");
         restartWatcher();
+        // The plain groups too. They have no watcher to restart, which is exactly why the one
+        // gesture that means "everything is stale, go and look again" has to reach them.
+        var settings = new SettingsManager().loadSettings();
+        if (settings != null) {
+            for (var group : littlejlib.proj.group.Groups.plain(settings)) {
+                littlejlib.proj.workspace.WorkspaceRefresh.run(group, true, null, note -> log("  " + note));
+            }
+        }
         tray.note("ready");
     }
 
@@ -235,12 +260,25 @@ public class Server {
         return settings.getBrowsePaths().stream().map(Paths::get).filter(Files::isDirectory).toList();
     }
 
+    /**
+     * Registering a {@code WatchKey} on every directory the scanner would descend into, across every
+     * code base, is the single biggest cost in a cold daemon boot - measured at over five seconds
+     * for ~11,700 directories across three bases (PRP 35), more than the JavaFX platform bootstrap
+     * and the first Stage+Scene put together. Nothing needs it answered before the first window can
+     * appear - a change missed in the few seconds before the watcher is live is caught by the next
+     * scan or the watcher itself once it is - so the registration walk runs on its own thread and
+     * {@link #run} moves straight on to warming the picker instead of queueing behind it.
+     */
     void startWatcher() {
         var settings = new SettingsManager().loadSettings();
         if (settings == null) return;
         watcher = new ProjectWatcher(settings.getProjectScanningDepth());
-        watcher.start(browsePaths(settings));
-        log("watching " + browsePaths(settings));
+        var paths = browsePaths(settings);
+        new Thread(() -> {
+            var t0 = littlejlib.proj.util.Boot.ms();
+            watcher.start(paths);
+            log("watching " + paths + "   (registration took " + (littlejlib.proj.util.Boot.ms() - t0) + "ms)");
+        }, "ProjectWatcher-Register").start();
     }
 
     void restartWatcher() {
@@ -258,6 +296,7 @@ public class Server {
         try {
             littlejlib.proj.util.GlobalHotkey.uninstall();
             if (watcher != null) watcher.stop();
+            workspaces.stop();
             PickerHost.dispose();
             tray.remove();
             if (serverSocket != null) serverSocket.close();

@@ -47,6 +47,16 @@ public class DB {
         return instance;
     }
 
+    /**
+     * Whether THIS process already holds the database open. The lock is exclusive, so a caller that
+     * wants data has to know whether reading it here is free or impossible - see
+     * {@code prp/PrpSessions}.
+     */
+    public static synchronized boolean isOpen() {
+        return instance != null && instance.isInitialized.get()
+                && instance.server != null && instance.server.isStarted();
+    }
+
     private void init() {
         if (isInitialized.get()) {
             log.warning("Database already initialized");
@@ -68,7 +78,7 @@ public class DB {
             GlobalConfiguration.SERVER_ROOT_PASSWORD.setValue(DEFAULT_ROOT_PASSWORD);
             GlobalConfiguration.SERVER_METRICS.setValue(false);
 
-            // Create and start server
+            QuietShutdownLogger.install();
             server = new ArcadeDBServer(new ContextConfiguration());
             server.start();
             if (littlejlib.proj.Main.isVerbose()) {
@@ -106,7 +116,10 @@ public class DB {
     private void initSchema(Database db) {
         try {
             InitDoc.initDocTypes(db, ProjectRecord.TYPEDEF, CentralArtifact.TYPEDEF, ProjectDependency.TYPEDEF,
-                    littlejlib.proj.model.FileRecord.TYPEDEF);
+                    littlejlib.proj.model.FileRecord.TYPEDEF,
+                    littlejlib.proj.workspace.WorkspaceRecord.TYPEDEF,
+                    littlejlib.proj.prp.PrpSession.TYPEDEF,
+                    littlejlib.proj.prp.ProjectKey.TYPEDEF);
             if (littlejlib.proj.Main.isVerbose()) {
                 log.info("Database schema initialized successfully");
             }

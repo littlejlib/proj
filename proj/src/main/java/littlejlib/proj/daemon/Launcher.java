@@ -21,6 +21,18 @@ public final class Launcher {
 
     public static final long START_WAIT_MS = 30_000, EXIT_WAIT_MS = 10_000, POLL_MS = 200;
 
+    /** Daemon-only: the client's own flags are not capped, since every CLI call is short-lived. Same shape as jacli-daemon. */
+    static final java.util.List<String> MEMORY_CAPS = java.util.List.of(
+            "-Xmx768m", "-XX:+UseSerialGC", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30",
+            "-XX:MaxMetaspaceSize=256m", "-XX:MaxDirectMemorySize=256m", "-XX:ReservedCodeCacheSize=96m");
+
+    static boolean isMemoryFlag(String a) {
+        return a.startsWith("-Xmx") || a.startsWith("-Xms") || a.startsWith("-XX:MaxHeap")
+                || a.startsWith("-XX:MinHeap") || a.startsWith("-XX:MaxMetaspace")
+                || a.startsWith("-XX:MaxDirect") || a.startsWith("-XX:ReservedCodeCache")
+                || a.startsWith("-XX:+Use") && a.endsWith("GC");
+    }
+
     public static Info startAndWait(Consumer<String> log) throws java.io.IOException {
         var jar = Build.jar();
         if (jar == null) throw new java.io.IOException(
@@ -30,8 +42,9 @@ public final class Launcher {
         command.add(javaBinary());
         ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
                 .filter(a -> !a.startsWith("-agentlib") && !a.startsWith("-javaagent")
-                        && !a.startsWith("-XX:AOTCacheOutput"))
+                        && !a.startsWith("-XX:AOTCacheOutput") && !isMemoryFlag(a))
                 .forEach(command::add);
+        command.addAll(MEMORY_CAPS);
         command.add("-jar");
         command.add(jar.getAbsolutePath());
         command.add("--daemon");

@@ -17,7 +17,7 @@ import java.util.ArrayList;
  * <p>
  * So the prompt is now assembled from what is actually on disk:
  * <pre>
- * &#64;prp/27-prp-name.md &#64;prp/27-prp.status.md read 10% of the end of the previous prp logs file
+ * &#64;prp/27-prp-name.md &#64;prp/27-prp.status.md read the last 10 percent of the previous prp logs file
  * which is prp/27-prp.99.02.logs.txt
  * </pre>
  * EVERY CLAUSE IS CONDITIONAL ON ITS FILE EXISTING. A PRP written five minutes ago has no status
@@ -58,7 +58,7 @@ public final class PrpPrompt {
 
         var last = index == null ? null : PrpLogs.latest(prpDir, index);
         if (last != null && percent > 0) {
-            parts.add("read " + percent + "% of the end of the previous prp logs file which is "
+            parts.add("read the last " + percent + " percent of the previous prp logs file which is "
                     + relative(project, last.file()));
         }
         return String.join(" ", parts);
@@ -70,13 +70,24 @@ public final class PrpPrompt {
     }
 
     public static String command(Path prpFile, Settings settings, int percent) {
+        return command(prpFile, settings, percent, AgentLauncher.newSessionId(),
+                TabName.of(prpFile, null));
+    }
+
+    /**
+     * @param sessionId the id the conversation will have, so it can be recorded before it exists
+     * @param tabName   what the tab is called; claude-code writes it as the terminal title and keeps
+     *                  writing it, which is why no terminal has to be asked to rename anything
+     */
+    public static String command(Path prpFile, Settings settings, int percent,
+                                 String sessionId, String tabName) {
         var project = AgentLauncher.projectRootOf(prpFile);
 
         // The TEMPLATE is expanded first and the PROMPT substituted into the result, never the
         // other way round. A PRP whose file name happened to contain %FLAGS% would otherwise have
         // it expanded, which is a placeholder injected by a file name - a small hole, and free to
         // close by ordering the two substitutions.
-        return withFlags(AgentLauncher.templateOf(settings), settings)
+        return shell(settings, sessionId, tabName)
                 .replace("%PRP%", relative(project, prpFile))
                 .replace("%PRP_ABS%", prpFile.toAbsolutePath().toString())
                 .replace("%PATH%", project.toAbsolutePath().toString())
@@ -84,28 +95,21 @@ public final class PrpPrompt {
     }
 
     /**
-     * What the terminal tab is called: the PRP's name, made readable.
-     * {@code 27-prp-prp_side_panel_and_sorting_order.md} becomes
-     * {@code PRP side panel and sorting order}.
-     * <p>
-     * Taken from the tabs already open on this machine, which read exactly that way. No index in it,
-     * for the same reason those do not have one - a tab is identified by what it is about, and the
-     * number is only useful next to the other numbers.
-     * <p>
-     * It is a STARTING title, and worth knowing why: claude-code rewrites the terminal title as it
-     * works, prefixing its own progress glyph, so this is what the tab says until the agent takes
-     * over and after it finishes. Tabby's MCP has no rename-tab verb, so a name that survives the
-     * agent is not something this can offer.
+     * The template with everything expanded except the instruction itself. A missing tab name takes
+     * its whole option with it rather than leaving {@code --name ""} behind, the same way
+     * {@code %FLAGS%} takes the space in front of it.
      */
-    public static String tabTitle(Path prpFile) {
-        var name = prpFile.getFileName() == null ? "" : prpFile.getFileName().toString();
-        var m = java.util.regex.Pattern.compile("^\\d{2}-prp-(.+?)(\\.closed)?\\.md$").matcher(name);
-        var words = (m.matches() ? m.group(1) : name.replaceAll("\\.md$", ""))
-                .replace('_', ' ').replace('-', ' ').trim();
-        if (words.isEmpty()) return "PRP";
-        // "prp side panel..." reads as an acronym at the front of a title, so it is written as one.
-        if (words.regionMatches(true, 0, "prp ", 0, 4)) return "PRP " + words.substring(4);
-        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
+    static String shell(Settings settings, String sessionId, String tabName) {
+        var filled = withFlags(AgentLauncher.templateOf(settings), settings)
+                .replace("%SESSION%", sessionId == null ? AgentLauncher.newSessionId() : sessionId);
+        if (tabName != null && !tabName.isBlank()) return filled.replace("%NAME%", tabName.trim());
+        return filled.replace(" --name \"%NAME%\"", "").replace(" --name %NAME%", "")
+                .replace("%NAME%", "");
+    }
+
+    /** What the tab is called - see {@link TabName}, which is where the convention lives. */
+    public static String tabName(Path prpFile) {
+        return TabName.of(prpFile, null);
     }
 
     /**
@@ -131,13 +135,23 @@ public final class PrpPrompt {
      * for this particular session, and a command that has already submitted its prompt is a command
      * you have to interrupt to add it.
      * <p>
-     * Derived by cutting the template at its first quote rather than hardcoding "claude", so a user
-     * who runs a different agent still gets their own program here.
+     * Built by REMOVING the prompt slot rather than by cutting the template at its first quote,
+     * which stopped working the moment a quoted flag came before it.
      */
     public static String commandWithoutPrompt(Settings settings) {
-        var filled = withFlags(AgentLauncher.templateOf(settings), settings);
-        var quote = filled.indexOf('"');
-        return (quote < 0 ? filled.replace("%PROMPT%", "") : filled.substring(0, quote)).trim();
+        return commandWithoutPrompt(settings, null, null);
+    }
+
+    public static String commandWithoutPrompt(Settings settings, String sessionId, String tabName) {
+        return shell(settings, sessionId, tabName)
+                .replace("\"%PROMPT%\"", "").replace("%PROMPT%", "")
+                .replaceAll("\\s+", " ").trim();
+    }
+
+    /** The program the template runs, so a resume line does not have to assume it is claude. */
+    public static String program(Settings settings) {
+        var argv = littlejlib.proj.util.Cmd.parse(AgentLauncher.templateOf(settings));
+        return argv.length == 0 ? "claude" : argv[0];
     }
 
     /** The PRP's two-digit index, taken from its file name. Null for a file that is not one. */

@@ -1,7 +1,5 @@
 package littlejlib.proj;
 
-import org.jline.reader.LineReader;
-import org.jline.terminal.Terminal;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,22 +14,22 @@ public class GitManager {
 
     private static final Pattern GITHUB_URL_PATTERN = Pattern.compile("https://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?/?$");
 
-    public static void cloneRepository(Terminal terminal, LineReader lineReader, Settings settings) {
-        terminal.writer().println("\n--- Git Clone Repository ---");
-        terminal.writer().flush();
+    public static void cloneRepository(Settings settings) {
+        System.out.println("\n--- Git Clone Repository ---");
+        System.out.flush();
 
-        String gitUrl = lineReader.readLine("Enter GitHub repository URL: ").trim();
+        String gitUrl = Prompt.ask("Enter GitHub repository URL: ").trim();
         if (gitUrl.isEmpty()) {
-            terminal.writer().println("URL cannot be empty.");
-            terminal.writer().flush();
+            System.out.println("URL cannot be empty.");
+            System.out.flush();
             return;
         }
 
         Matcher matcher = GITHUB_URL_PATTERN.matcher(gitUrl);
         if (!matcher.matches()) {
-            terminal.writer().println("Invalid GitHub URL format.");
-            terminal.writer().println("Expected format: https://github.com/<organization>/<repository>");
-            terminal.writer().flush();
+            System.out.println("Invalid GitHub URL format.");
+            System.out.println("Expected format: https://github.com/<organization>/<repository>");
+            System.out.flush();
             return;
         }
 
@@ -41,33 +39,33 @@ public class GitManager {
         boolean internal = settings.isConfiguredOrganization(organization);
         String basePath = settings.getCloneBasePathForOrg(organization);
 
-        terminal.writer().println("\nDetected:");
-        terminal.writer().println("  Organization: " + organization
+        System.out.println("\nDetected:");
+        System.out.println("  Organization: " + organization
                 + (internal ? " (configured/internal)" : " (external)"));
-        terminal.writer().println("  Repository: " + repository);
-        terminal.writer().println("  Destination base: " + basePath
+        System.out.println("  Repository: " + repository);
+        System.out.println("  Destination base: " + basePath
                 + (internal ? "  [code repos]" : "  [github mirror]"));
-        terminal.writer().flush();
+        System.out.flush();
 
         Path orgPath = Paths.get(basePath, organization);
         Path repoPath = orgPath.resolve(repository);
 
         if (Files.exists(repoPath)) {
-            terminal.writer().println("\nRepository already exists at: " + repoPath);
-            terminal.writer().flush();
+            System.out.println("\nRepository already exists at: " + repoPath);
+            System.out.flush();
             return;
         }
 
         try {
             if (!Files.exists(orgPath)) {
-                terminal.writer().println("Creating organization directory: " + orgPath);
+                System.out.println("Creating organization directory: " + orgPath);
                 Files.createDirectories(orgPath);
-                terminal.writer().flush();
+                System.out.flush();
             }
 
-            terminal.writer().println("\nCloning repository...");
-            terminal.writer().println("Target directory: " + orgPath);
-            terminal.writer().flush();
+            System.out.println("\nCloning repository...");
+            System.out.println("Target directory: " + orgPath);
+            System.out.flush();
 
             ProcessBuilder pb = new ProcessBuilder("git", "clone", gitUrl);
             pb.directory(orgPath.toFile());
@@ -78,25 +76,25 @@ public class GitManager {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
-                terminal.writer().println(line);
-                terminal.writer().flush();
+                System.out.println(line);
+                System.out.flush();
             }
 
             int exitCode = process.waitFor();
 
             if (exitCode == 0) {
-                terminal.writer().println("\nRepository cloned successfully to: " + repoPath);
+                System.out.println("\nRepository cloned successfully to: " + repoPath);
             } else {
-                terminal.writer().println("\nGit clone failed with exit code: " + exitCode);
+                System.out.println("\nGit clone failed with exit code: " + exitCode);
             }
-            terminal.writer().flush();
+            System.out.flush();
 
         } catch (IOException e) {
-            terminal.writer().println("Error during clone operation: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Error during clone operation: " + e.getMessage());
+            System.out.flush();
         } catch (InterruptedException e) {
-            terminal.writer().println("Clone operation interrupted: " + e.getMessage());
-            terminal.writer().flush();
+            System.out.println("Clone operation interrupted: " + e.getMessage());
+            System.out.flush();
             Thread.currentThread().interrupt();
         }
     }
