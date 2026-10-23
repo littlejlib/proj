@@ -22,7 +22,8 @@ public final class LiveSession extends LiveSession_A {
     Long workingSet;
     Long privateBytes;
     Integer humanTurns;
-    String prpIndex;        // filled by LiveSessions.withDetail; "-" when not on a PRP
+    String prpIndex;        // filled by LiveSessions.withDetail; "-" not on a PRP, "?" uncertain
+    String prpFile;
 
     public long idleMinutes(long now) {
         return updatedAt == null ? -1 : Math.max(0, (now - updatedAt) / 60000);

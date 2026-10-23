@@ -91,8 +91,9 @@ public final class LiveSessions {
             if (file == null) return;
             try {
                 s.humanTurns(SessionRead.of(file, 1).session().humanTurns());
-                var prp = SessionPrp.of(s, file);
-                s.prpIndex(prp == null ? "-" : prp.getIndex());
+                var pick = SessionPrp.pick(s, file);
+                s.prpIndex(pick == null ? "-" : pick.sure() ? pick.entry().getIndex() : "?");
+                if (pick != null) s.prpFile(pick.entry().getMainFile().toString());
             } catch (RuntimeException ignored) { }
         });
         return sessions;

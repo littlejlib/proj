@@ -26,6 +26,9 @@ public final class HibTabCmd implements Runnable {
     @Option(names = "--dry-run", description = "Say what would happen, change nothing")
     boolean dryRun;
 
+    @Option(names = "--prp", description = "The PRP, when the detected one is wrong: a PRP file, or a number in its <cwd>/prp (one target only)")
+    String prp;
+
     @Override
     public void run() {
         var self = LiveSessions.self();
@@ -40,7 +43,7 @@ public final class HibTabCmd implements Runnable {
             }
             var s = hits.get(0);
             var isSelf = self != null && self.pid().equals(s.pid());
-            worst = Math.max(worst, HibCli.report(Hibernator.run(s, isSelf, anyway, force, dryRun)));
+            worst = Math.max(worst, HibCli.report(Hibernator.run(s, isSelf, anyway, force, dryRun, targets.size() == 1 ? prp : null)));
         }
         System.exit(worst);
     }

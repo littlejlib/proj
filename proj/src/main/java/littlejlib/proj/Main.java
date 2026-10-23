@@ -1162,6 +1162,8 @@ public class Main implements Runnable {
             System.out.println("  hib tab <name>   Hibernate others   --force --anyway --dry-run");
             System.out.println("  hib parked       Hibernated ones   [filter] --was --all --json");
             System.out.println("  hib restore <n>  Reopen in a new tab with claude --resume   --print --again");
+            System.out.println("  hib suggest      Idle ones worth hibernating; dry run unless --apply, which");
+            System.out.println("                   asks in a window (F2)   --min-idle <minutes> --json");
             System.out.println("  hib ui           The picker's Conversations tab (F8 hibernate, F9 restore)");
             System.out.println();
             System.out.println("Housekeeping:");

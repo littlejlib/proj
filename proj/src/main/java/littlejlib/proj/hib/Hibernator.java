@@ -18,17 +18,29 @@ public final class Hibernator {
         }
     }
 
-    public static final int REFUSED_BUSY = 6, REFUSED_NO_PRP = 7, NO_TRANSCRIPT = 8;
+    public static final int REFUSED_BUSY = 6, REFUSED_NO_PRP = 7, NO_TRANSCRIPT = 8, REFUSED_UNSURE = 9;
     static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
     /** @param self true for {@code !proj hib}: the close is left to the caller, after it has reported */
     public static Outcome run(LiveSession s, boolean self, boolean anyway, boolean force, boolean dryRun) {
+        return run(s, self, anyway, force, dryRun, null);
+    }
+
+    /** @param prpWanted {@code --prp}: a PRP file or number that overrides the one detected, or null */
+    public static Outcome run(LiveSession s, boolean self, boolean anyway, boolean force, boolean dryRun, String prpWanted) {
         if (!self && s.busy() && !force)
             return Outcome.refused(REFUSED_BUSY, s.label() + " is busy (mid-turn). --force to hibernate it anyway.");
         var transcript = s.transcript();
         if (transcript == null)
             return Outcome.refused(NO_TRANSCRIPT, "no transcript found for " + s.label() + " in " + s.cwd());
-        var prp = SessionPrp.of(s, transcript);
+        var pick = prpWanted != null ? given(prpWanted, s) : SessionPrp.pick(s, transcript);
+        if (prpWanted != null && pick == null)
+            return Outcome.refused(REFUSED_NO_PRP, "--prp " + prpWanted + ": no such PRP (a PRP file, or a number in " + s.cwd() + "\\prp)");
+        if (pick != null && !pick.sure() && !dryRun) {
+            if (!anyway) return uncertain(s, pick);
+            pick = null;
+        }
+        var prp = pick == null ? null : pick.entry();
         if (prp == null && !anyway) return Outcome.refused(REFUSED_NO_PRP, notOnPrp(s));
 
         var stats = SessionRead.of(transcript, 1).session();
@@ -40,15 +52,23 @@ public final class Hibernator {
         if (prp != null) r.prpFile(prp.getMainFile().toString()).prpIndex(prp.getIndex()).prpName(prp.getName());
 
         var lines = new ArrayList<String>();
+        var prpLine = "prp         " + (prp == null ? "none - log goes to " + HibStore.looseLogs()
+                : prp.getMainFile() + "  (" + pick.why() + "; --prp <file|NN> to choose another)");
         if (dryRun) {
-            lines.add("would hibernate " + s.label() + "  (" + r.prpLabel() + ", " + ProcMem.mb(s.workingSet())
-                    + " MB RAM, " + ProcMem.mb(s.privateBytes()) + " MB committed)");
+            lines.add("would hibernate " + s.label() + "  (" + ProcMem.mb(s.workingSet()) + " MB RAM, "
+                    + ProcMem.mb(s.privateBytes()) + " MB committed)");
+            lines.add(prpLine);
+            if (pick != null && !pick.table().isEmpty()) {
+                lines.add("            score    where           mentions  PRP");
+                pick.table().forEach(t -> lines.add("          " + t));
+            }
             return new Outcome(r, lines, 0, null);
         }
 
         r.logFile(writeLog(s, prp, transcript).toString());
         HibStore.append(r);
-        lines.add("hibernated  " + s.label() + "  (" + r.prpLabel() + ")");
+        lines.add("hibernated  " + s.label());
+        lines.add(prpLine);
         lines.add("log         " + r.logFile());
         lines.add("restore     proj hib restore " + restoreHandle(r));
         if (self) {
@@ -58,6 +78,11 @@ public final class Hibernator {
         var closed = Closer.end(s);
         lines.add(closed ? "tab closed" : "could not end it - close the tab by hand; the record is saved");
         return new Outcome(r, lines, closed ? 0 : 3, null);
+    }
+
+    static SessionPrp.Pick given(String wanted, LiveSession s) {
+        var e = SessionPrp.given(wanted, Path.of(s.cwd()));
+        return e == null ? null : new SessionPrp.Pick(e, "given with --prp", List.of());
     }
 
     static Path writeLog(LiveSession s, PrpEntry prp, Path transcript) {
@@ -78,6 +103,15 @@ public final class Hibernator {
             throw new UncheckedIOException("cannot write " + target, e);
         }
         return target;
+    }
+
+    /** Guessing would file the log under the wrong task, so the choice goes back to whoever asked. */
+    static Outcome uncertain(LiveSession s, SessionPrp.Pick pick) {
+        var lines = new ArrayList<String>();
+        lines.add("NOT HIBERNATED: cannot tell which PRP " + s.label() + " is on. Candidates (score, where, mentions):");
+        pick.table().stream().limit(4).forEach(t -> lines.add("   " + t));
+        lines.add("Choose one:  proj hib --prp <PRP file>   (or  proj hib tab " + s.pid() + " --prp <PRP file>),  or --anyway without a PRP.");
+        return new Outcome(null, lines, REFUSED_UNSURE, null);
     }
 
     static String notOnPrp(LiveSession s) {

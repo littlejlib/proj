@@ -46,6 +46,7 @@ public final class ConversationActions {
                 case 0 -> "hibernated " + s.label() + " - log " + Path.of(o.record().logFile()).getFileName();
                 case Hibernator.REFUSED_NO_PRP -> s.label() + " is not on a PRP - ask its Claude to create one, or F7 twice to hibernate anyway";
                 case Hibernator.REFUSED_BUSY -> s.label() + " is busy mid-turn - F7 twice to hibernate anyway";
+                case Hibernator.REFUSED_UNSURE -> "cannot tell which PRP " + s.label() + " is on - choose with  proj hib tab " + s.pid() + " --prp <file>, or F7 twice for none";
                 default -> String.join("; ", o.lines());
             };
         });

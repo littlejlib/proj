@@ -17,7 +17,7 @@ import static littlejlib.proj.cli.PrpCommands.OUT;
 @Command(name = "hib", aliases = "hibernate", mixinStandardHelpOptions = true,
         description = "Hibernate THIS claude-code conversation (export log, record, close tab). "
                 + "Subcommands list, hibernate others and restore.",
-        subcommands = {HibLsCmd.class, HibTabCmd.class, HibParkedCmd.class, HibRestoreCmd.class, HibUiCmd.class},
+        subcommands = {HibLsCmd.class, HibTabCmd.class, HibParkedCmd.class, HibRestoreCmd.class, HibSuggestCmd.class, HibUiCmd.class},
         synopsisSubcommandLabel = "[COMMAND]")
 public final class HibCli implements Runnable {
 
@@ -26,6 +26,9 @@ public final class HibCli implements Runnable {
 
     @Option(names = "--dry-run", description = "Say what would happen, change nothing")
     boolean dryRun;
+
+    @Option(names = "--prp", description = "The PRP this conversation is on, when the detected one is wrong: a PRP file, or a number in <cwd>/prp")
+    String prp;
 
     @Override
     public void run() {
@@ -36,7 +39,7 @@ public final class HibCli implements Runnable {
             System.exit(2);
             return;
         }
-        System.exit(report(Hibernator.run(self, true, anyway, false, dryRun)));
+        System.exit(report(Hibernator.run(self, true, anyway, false, dryRun, prp)));
     }
 
     static int report(Hibernator.Outcome o) {

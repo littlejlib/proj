@@ -58,6 +58,7 @@ public final class HibLsCmd implements Runnable {
         if (full) {
             m.put("turns", s.humanTurns() == null ? "?" : s.humanTurns().toString());
             m.put("prp", s.prpIndex() == null ? "?" : s.prpIndex());
+            m.put("prpFile", s.prpFile());
         }
         return m;
     }
