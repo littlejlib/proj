@@ -36,6 +36,7 @@ import java.io.IOException;
              Main.ConfigCommand.class,
              littlejlib.proj.cli.ShellCommands.ShellCmd.class,
              littlejlib.proj.cli.AotCommands.AotCmd.class,
+             littlejlib.proj.cli.HibCli.class,
              Main.HelpCommand.class
          },
          footer = "%nRun 'prj' without arguments to use interactive menu mode.%n")
@@ -1153,6 +1154,15 @@ public class Main implements Runnable {
             System.out.println("  prp dir          Print the prp folder these act on   --dir");
             System.out.println();
             System.out.println("  term, t       Open your terminal in a directory   [dir] --which");
+            System.out.println();
+            System.out.println("Claude-code conversations - free RAM without losing the task:");
+            System.out.println("  hib              Typed as !proj hib inside one: export its log, record it,");
+            System.out.println("                   close the tab   --anyway (no PRP) --dry-run");
+            System.out.println("  hib ls           Running ones: idle, RAM, committed   --full --json");
+            System.out.println("  hib tab <name>   Hibernate others   --force --anyway --dry-run");
+            System.out.println("  hib parked       Hibernated ones   [filter] --was --all --json");
+            System.out.println("  hib restore <n>  Reopen in a new tab with claude --resume   --print --again");
+            System.out.println("  hib ui           The picker's Conversations tab (F8 hibernate, F9 restore)");
             System.out.println();
             System.out.println("Housekeeping:");
             System.out.println("  daemon        Inspect or control the background daemon (status|start|stop|restart|log)");

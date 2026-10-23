@@ -634,6 +634,7 @@ public class ProjectPickerDialog {
             if (group != null && group.prps) group.prpPanel.onKey(e);
             if (group != null && group.folders != null && group.folders.onKey(e)) return;
             if (tabs.selected() == tabs.transcripts) tabs.transcriptsTab.onKey(e);
+            if (tabs.selected() == tabs.conversations) tabs.conversationsTab.onKey(e);
             if (!e.isConsumed() && Keys.plain(e, KeyCode.ESCAPE)) {
                 tabs.select(tabs.projects);
                 e.consume();

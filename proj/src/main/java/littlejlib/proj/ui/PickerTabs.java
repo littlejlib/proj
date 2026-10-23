@@ -24,7 +24,8 @@ import java.util.function.Supplier;
 public final class PickerTabs {
 
     public final TabPane pane = new TabPane();
-    public final Tab projects, transcripts, settings;
+    public final Tab projects, conversations, transcripts, settings;
+    public final ConversationsTab conversationsTab;
     public final TranscriptsTab transcriptsTab;
     public final List<GroupTab> groups = new ArrayList<>();
 
@@ -47,13 +48,15 @@ public final class PickerTabs {
         }
         projects = groups.get(0).tab;
 
+        conversationsTab = new ConversationsTab(config);
+        conversations = new Tab("Conversations");
         transcriptsTab = new TranscriptsTab(config, onActivateProject);
         transcripts = new Tab("Transcripts");
         settings = new Tab("Settings");
 
         pane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         groups.forEach(g -> pane.getTabs().add(g.tab));
-        pane.getTabs().addAll(transcripts, settings);
+        pane.getTabs().addAll(conversations, transcripts, settings);
         retitle();
         pane.getSelectionModel().selectedItemProperty().addListener((o, a, b) -> onSelected(b));
     }
@@ -88,6 +91,12 @@ public final class PickerTabs {
 
     void onSelected(Tab selected) {
         var passingThrough = walking;
+        if (selected == conversations) {
+            if (conversations.getContent() == null) conversations.setContent(conversationsTab.build());
+            conversationsTab.refresh();
+            if (!passingThrough) Platform.runLater(conversationsTab::focusSearch);
+            return;
+        }
         if (selected == transcripts) {
             if (transcripts.getContent() == null) transcripts.setContent(transcriptsTab.build());
             transcriptsTab.start();
@@ -181,6 +190,8 @@ public final class PickerTabs {
         var g = selectedGroup();
         if (g != null) {
             Platform.runLater(g::focusFilter);
+        } else if (selected() == conversations) {
+            Platform.runLater(conversationsTab::focusSearch);
         } else if (selected() == transcripts) {
             Platform.runLater(transcriptsTab::focusSearch);
         } else if (selected() == settings && settings.getContent() != null) {
@@ -215,6 +226,7 @@ public final class PickerTabs {
         if (name == null || name.isBlank()) return projects;
         return switch (name.toLowerCase(java.util.Locale.ROOT)) {
             case "transcripts", "cct", "cctranscripts", "chats" -> transcripts;
+            case "conversations", "hib", "hibernated", "running" -> conversations;
             case "settings", "config" -> settings;
             case "prps", "prp", "global-prp", "recent" -> groups.get(1).tab;
             default -> bySlug(name);
