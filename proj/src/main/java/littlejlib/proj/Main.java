@@ -780,6 +780,7 @@ public class Main implements Runnable {
                  littlejlib.proj.cli.PrpCommands.ShowCmd.class,
                  littlejlib.proj.cli.PrpCommands.AgentCmd.class,
                  littlejlib.proj.cli.PrpResumeCmd.class,
+                 littlejlib.proj.cli.PrpPreCompactCmd.class,
                  littlejlib.proj.cli.PrpKeyCmd.class,
                  littlejlib.proj.cli.PrpCommands.PromptCmd.class,
                  littlejlib.proj.cli.PrpCommands.LogsCmd.class,

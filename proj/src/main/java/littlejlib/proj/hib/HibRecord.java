@@ -26,6 +26,9 @@ public final class HibRecord extends HibRecord_A {
     Long workingSet;
     Long privateBytes;
     String note;
+    String hibernatedBy;    // "precompact" when the PreCompact hook parked it, so a resume offers continue or fresh
+
+    public static final String BY_PRECOMPACT = "precompact";
 
     public boolean hibernated() {
         return HIBERNATED.equals(state);
