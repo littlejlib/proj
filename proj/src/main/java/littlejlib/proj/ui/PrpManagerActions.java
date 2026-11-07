@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import littlejlib.proj.PRPTemplateLoader;
 import littlejlib.proj.Settings;
 import littlejlib.proj.prp.PrpEntry;
+import littlejlib.proj.util.Cmd;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +17,16 @@ public class PrpManagerActions {
      * Opens a file in the configured editor
      */
     public static void openInEditor(Path filePath, Settings settings) {
+        if (!onFxThread()) openNow(filePath, settings);
+        else Thread.ofPlatform().daemon().name("proj-open-editor").start(() -> openNow(filePath, settings));
+    }
+
+    /** By name, not Platform.isFxApplicationThread(): that initialises the toolkit, and the command line calls this too. */
+    static boolean onFxThread() {
+        return Thread.currentThread().getName().equals("JavaFX Application Thread");
+    }
+
+    static void openNow(Path filePath, Settings settings) {
         if (!Files.exists(filePath)) {
             showNotification("File not found: " + filePath.getFileName());
             return;
@@ -41,13 +52,8 @@ public class PrpManagerActions {
             return;
         }
 
-        try {
-            ProcessBuilder pb = new ProcessBuilder(editor, filePath.toAbsolutePath().toString());
-            pb.start();
-            showNotification("Opened: " + filePath.getFileName());
-        } catch (IOException e) {
-            showNotification("Error opening file: " + e.getMessage());
-        }
+        showNotification(Cmd.detached(editor, filePath.toAbsolutePath().toString())
+                ? "Opened: " + filePath.getFileName() : "Error opening file: " + filePath.getFileName());
     }
 
     /**

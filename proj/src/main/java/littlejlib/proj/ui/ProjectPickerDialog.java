@@ -585,7 +585,7 @@ public class ProjectPickerDialog {
         pane.getChildren().add(Legend.of("Alt+A auxiliary", Palette.GREY, () -> toggle(includeAuxiliary, "Auxiliary")));
         pane.getChildren().add(Legend.of("Alt+B add base", Palette.GREY, this::addCodeRepoBase));
         pane.getChildren().add(Legend.of("Alt+N new folder", Palette.GREY, this::newFolder));
-        pane.getChildren().add(Legend.of("Alt+K project key", Palette.GREY, this::editProjectKey));
+        pane.getChildren().add(Legend.of("Alt+K project", Palette.GREY, this::editProjectKey));
         pane.getChildren().add(Chip.of("Esc cancel", Palette.GREY));
         return pane;
     }
@@ -827,7 +827,7 @@ public class ProjectPickerDialog {
     }
 
     void editProjectKey() {
-        ProjectKeyDialog.show(stage, projectForKey(), this::refreshTickets);
+        ProjectDialog.show(stage, projectForKey(), this::refreshTickets);
     }
 
     /** Every PRP list is showing tickets built from that key, so all of them are now out of date. */

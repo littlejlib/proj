@@ -107,7 +107,7 @@ public final class CloneCommands {
                 Files.createDirectories(target.destination().getParent());
                 // Inherited IO: git's progress goes straight to the caller's terminal, which is what
                 // makes a long clone watchable instead of silent.
-                var pb = new ProcessBuilder("git", "clone", target.url(), target.destination().toString());
+                var pb = littlejlib.proj.GitExe.command("clone", target.url(), target.destination().toString());
                 pb.inheritIO();
                 var exit = pb.start().waitFor();
                 if (exit != 0) {

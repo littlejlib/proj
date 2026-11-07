@@ -33,7 +33,7 @@ public final class AgentLauncher {
      * require editing a command line by hand and getting the quoting right.
      */
     public static final String DEFAULT_AGENT_COMMAND =
-            "claude %FLAGS% --session-id %SESSION% --name \"%NAME%\" \"%PROMPT%\"";
+            "claude %FLAGS% %MODEL% --session-id %SESSION% --name \"%NAME%\" \"%PROMPT%\"";
 
     /**
      * What the default used to be, kept so that an existing settings file is not stuck with it.
@@ -45,7 +45,8 @@ public final class AgentLauncher {
      */
     public static final java.util.Set<String> LEGACY_AGENT_COMMANDS = java.util.Set.of(
             "claude \"@%PRP% read this PRP and let us begin\"",
-            "claude %FLAGS% \"%PROMPT%\"");
+            "claude %FLAGS% \"%PROMPT%\"",
+            "claude %FLAGS% --session-id %SESSION% --name \"%NAME%\" \"%PROMPT%\"");
 
     /** The template actually in force: the configured one, unless it is blank or an old default. */
     public static String templateOf(Settings settings) {
@@ -63,8 +64,9 @@ public final class AgentLauncher {
         return java.util.UUID.randomUUID().toString();
     }
 
+    /** @param exe the explicit program the command runs, or null when it is the template's own */
     public record Launch(Path projectDir, Path prpFile, String relativePrp, String command,
-                         String sessionId, String tabName) { }
+                         String sessionId, String tabName, String exe) { }
 
     /**
      * Works out what would be run, without running it. Separated so the caller can show the command
@@ -76,11 +78,34 @@ public final class AgentLauncher {
         return plan(prpFile, settings, newSessionId(), PrpSessions.tabName(prpFile));
     }
 
+    public static Launch plan(Path prpFile, Settings settings, String model) {
+        return plan(prpFile, settings, newSessionId(), PrpSessions.tabName(prpFile), model);
+    }
+
     public static Launch plan(Path prpFile, Settings settings, String sessionId, String tabName) {
+        return plan(prpFile, settings, sessionId, tabName, null);
+    }
+
+    /** @param model haiku, sonnet, opus or a full model id; null or blank leaves it to the user's settings */
+    public static Launch plan(Path prpFile, Settings settings, String sessionId, String tabName,
+                              String model) {
+        return plan(prpFile, settings, sessionId, tabName, model, null);
+    }
+
+    /** A new session id and the remembered tab name, with a model and an explicit program. */
+    public static Launch planWith(Path prpFile, Settings settings, String model, String exe) {
+        return plan(prpFile, settings, newSessionId(), PrpSessions.tabName(prpFile), model, exe);
+    }
+
+    /** @param exe the program to run instead of the template's (fclaude ...); null or blank keeps it */
+    public static Launch plan(Path prpFile, Settings settings, String sessionId, String tabName,
+                              String model, String exe) {
         var project = projectRootOf(prpFile);
         var percent = settings == null ? 10 : settings.getAgentLogsTailPercent();
+        var program = AgentExe.check(exe);
         return new Launch(project, prpFile, relativise(project, prpFile),
-                PrpPrompt.command(prpFile, settings, percent, sessionId, tabName), sessionId, tabName);
+                PrpPrompt.command(prpFile, settings, percent, sessionId, tabName, model, program),
+                sessionId, tabName, program);
     }
 
     public static boolean launch(Path prpFile, Settings settings) {
@@ -111,6 +136,7 @@ public final class AgentLauncher {
     public static littlejlib.proj.terminal.RunOutcome start(
             Launch plan, Settings settings, littlejlib.proj.TerminalLauncher terminal,
             boolean newTerminal) {
+        ProjFile.prepare(plan.projectDir());
         return TerminalRunner.outcomeOf(terminal, plan.projectDir(), plan.command(),
                 "prp-" + plan.prpFile().getFileName(), settings, plan.tabName(), newTerminal);
     }

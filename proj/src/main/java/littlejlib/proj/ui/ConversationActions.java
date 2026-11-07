@@ -3,6 +3,7 @@ package littlejlib.proj.ui;
 import javafx.application.Platform;
 import littlejlib.proj.Settings;
 import littlejlib.proj.hib.*;
+import littlejlib.proj.prp.PrpSessions;
 import littlejlib.proj.terminal.RunOutcome;
 
 import java.nio.file.Path;
@@ -58,10 +59,25 @@ public final class ConversationActions {
             say.accept("transcript of " + r.label() + " is gone - F2 opens its log");
             return;
         }
+        // Asked here, on the FX thread, because the answer is a dialog; a PRP session that ran on another claude is the only case that asks.
+        String program;
+        try {
+            program = recordedExe(r);
+        } catch (IllegalArgumentException e) {
+            say.accept(e.getMessage());
+            return;
+        }
         say.accept("restoring " + r.label() + "…");
-        background(() -> Restorer.restore(r, settings) == RunOutcome.FAILED
+        background(() -> Restorer.restore(r, settings, null, program) == RunOutcome.FAILED
                 ? "could not open a terminal - register one in Settings"
                 : "restored " + r.label() + " in a new tab");
+    }
+
+    static String recordedExe(HibRecord r) {
+        if (r.prpFile() == null || r.prpFile().isBlank()) return null;
+        var session = PrpSessions.of(Path.of(r.prpFile())).stream()
+                .filter(s -> r.sessionId() != null && r.sessionId().equals(s.sessionId())).findFirst().orElse(null);
+        return ExeConfirm.programFor(session);
     }
 
     public void openLog(HibRecord r) {

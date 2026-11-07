@@ -2,6 +2,8 @@ package littlejlib.proj.scanner;
 
 import littlejlib.proj.model.ProjectRecord;
 
+import com.sun.nio.file.ExtendedWatchEventModifier;
+
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,10 +33,14 @@ public class ProjectWatcher {
     final Map<Path, Path> codeDirOf = new HashMap<>();
     final Map<Path, Integer> depthOf = new HashMap<>();
 
+    /** Set once a root is watched as a whole tree, which only Windows can do: one 16 KB buffer per root instead of one per directory. */
+    boolean tree;
+
     WatchService service;
     Thread thread;
     volatile boolean running;
     Consumer<List<ProjectRecord>> onChange = records -> { };
+    Runnable onActivity = () -> { };
 
     public ProjectWatcher(int maxDepth) {
         this.maxDepth = Math.max(1, maxDepth);
@@ -44,6 +50,17 @@ public class ProjectWatcher {
     public ProjectWatcher onChange(Consumer<List<ProjectRecord>> listener) {
         if (listener != null) this.onChange = listener;
         return this;
+    }
+
+    /** Told whenever events worth acting on arrive, so an idle trim does not run just before the work. */
+    public ProjectWatcher onActivity(Runnable listener) {
+        if (listener != null) this.onActivity = listener;
+        return this;
+    }
+
+    /** A build writing into target/ touches the project directory's listing; the scanner never lists these either. */
+    static boolean ignored(String name) {
+        return name.startsWith(".") || ProjectTreeScanner.IGNORED.contains(name.toLowerCase());
     }
 
     public synchronized void start(List<Path> codeDirs) {
@@ -57,7 +74,7 @@ public class ProjectWatcher {
         running = true;
         for (var cd : codeDirs) {
             var t0 = littlejlib.proj.util.Boot.ms();
-            register(cd, cd, 0);
+            if (!registerTree(cd)) register(cd, cd, 0);
             System.out.println("[ProjectWatcher] registered " + watched.size() + " directories so far, "
                     + cd + " took " + (littlejlib.proj.util.Boot.ms() - t0) + "ms");
             System.out.flush();
@@ -66,6 +83,18 @@ public class ProjectWatcher {
         thread = new Thread(this::loop, "ProjectWatcher");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    boolean registerTree(Path root) {
+        if (!System.getProperty("os.name", "").toLowerCase().contains("win") || !Files.isDirectory(root)) return false;
+        try {
+            watched.put(root.register(service, new WatchEvent.Kind<?>[] {ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY},
+                    ExtendedWatchEventModifier.FILE_TREE), root);
+            codeDirOf.put(root, root);
+            return tree = true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     void register(Path dir, Path codeDir, int depth) {
@@ -78,7 +107,7 @@ public class ProjectWatcher {
         } catch (Exception e) {
             return;
         }
-        if (depth == maxDepth) return;
+        if (depth == maxDepth || ProjectTreeScanner.isLeafDir(dir)) return;
         for (var child : scanner.childDirs(dir)) register(child, codeDir, depth + 1);
     }
 
@@ -105,7 +134,10 @@ public class ProjectWatcher {
             WatchKey extra;
             while ((extra = service.poll()) != null) drain(extra, touched);
 
-            if (!touched.isEmpty()) apply(touched);
+            if (!touched.isEmpty()) {
+                onActivity.run();
+                apply(touched);
+            }
         }
     }
 
@@ -113,11 +145,28 @@ public class ProjectWatcher {
         var dir = watched.get(key);
         if (dir != null) {
             for (var event : key.pollEvents()) {
-                if (event.kind() == OVERFLOW) continue;
+                if (event.kind() == OVERFLOW || !relevant(dir, Path.of(event.context().toString()))) continue;
                 touched.add(dir.resolve(event.context().toString()));
             }
         }
         if (!key.reset()) watched.remove(key);
+    }
+
+    /**
+     * An event path is relative to the watched directory: one name for a per-directory watch, the whole
+     * way down for a tree watch, where it also has to be cut to what the per-directory watches covered:
+     * nothing ignored, nothing deeper than the scan, nothing below a leaf project.
+     */
+    boolean relevant(Path watchedDir, Path rel) {
+        var n = rel.getNameCount();
+        if (n > maxDepth + 1) return false;
+        for (var name : rel) if (ignored(name.toString())) return false;
+        var dir = watchedDir;
+        for (var i = 0; i < n - 2; i++) {
+            dir = dir.resolve(rel.getName(i));
+            if (ProjectTreeScanner.isLeafDir(dir)) return false;
+        }
+        return true;
     }
 
     void apply(List<Path> touched) {
@@ -133,14 +182,14 @@ public class ProjectWatcher {
         var updated = new ArrayList<ProjectRecord>();
         for (var dir : dirs) {
             var codeDir = nearestCodeDir(dir);
-            if (codeDir == null) continue;
+            if (codeDir == null || dir.equals(codeDir)) continue;
 
             if (!Files.isDirectory(dir)) {
                 store.deleteByPath(dir.toAbsolutePath().toString());
                 continue;
             }
 
-            var depth = depthOf.getOrDefault(dir, 1);
+            var depth = depthOf.getOrDefault(dir, Math.max(1, codeDir.relativize(dir).getNameCount()));
             // describe() appends to the scanner's dependency list, which is designed to accumulate
             // across a whole scan. This watcher lives for the life of the daemon, so the list is
             // emptied first and read straight afterwards - otherwise it grows without bound and
@@ -163,7 +212,7 @@ public class ProjectWatcher {
                 store.save(rec);
                 if (rec.maven()) store.replaceDependencies(List.of(rec.path()), deps);
                 updated.add(rec);
-                if (!depthOf.containsKey(dir)) register(dir, codeDir, depth);
+                if (!tree && !depthOf.containsKey(dir)) register(dir, codeDir, depth);
             } else if (store.byPath(rec.path()) != null) {
                 store.deleteByPath(rec.path());
                 store.replaceDependencies(List.of(rec.path()), List.of());

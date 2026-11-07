@@ -72,7 +72,7 @@ public final class ProjectActions {
             }
             editor = detected.exe.toAbsolutePath().toString();
         }
-        Cmd.run(new String[]{editor, pom.toAbsolutePath().toString()}, null);
+        Cmd.detached(editor, pom.toAbsolutePath().toString());
     }
 
     static void copy(String text, String confirmation) {

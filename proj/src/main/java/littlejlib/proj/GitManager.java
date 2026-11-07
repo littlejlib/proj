@@ -67,7 +67,7 @@ public class GitManager {
             System.out.println("Target directory: " + orgPath);
             System.out.flush();
 
-            ProcessBuilder pb = new ProcessBuilder("git", "clone", gitUrl);
+            ProcessBuilder pb = GitExe.command("clone", gitUrl);
             pb.directory(orgPath.toFile());
             pb.redirectErrorStream(true);
 

@@ -12,6 +12,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import littlejlib.proj.Settings;
 import littlejlib.proj.TerminalLauncher;
+import littlejlib.proj.prp.AgentExe;
 import littlejlib.proj.prp.AgentLauncher;
 import littlejlib.proj.prp.PrpPrompt;
 import littlejlib.proj.terminal.TerminalRunner;
@@ -95,6 +96,42 @@ public final class AgentLaunchDialog {
         var tailRow = new HBox(8, new Label("Read"), tail, tailNote);
         tailRow.setAlignment(Pos.CENTER_LEFT);
 
+        // Per launch, like the tab name: a monitor is Haiku, a legal draft is Opus, and a setting
+        // changed for one agent is a setting forgotten afterwards. Editable, so a full model id works.
+        var model = new ComboBox<String>();
+        model.setEditable(true);
+        model.getItems().addAll(PrpPrompt.MODELS);
+        model.setPromptText("(settings default)");
+        model.setPrefWidth(200);
+        var modelNote = new Label("model   -   empty keeps the default of your claude settings");
+        modelNote.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
+        var modelRow = new HBox(8, new Label("Model"), model, modelNote);
+        modelRow.setAlignment(Pos.CENTER_LEFT);
+        java.util.function.Supplier<String> modelNow = () -> model.getEditor().getText().trim();
+
+        // Which claude: an explicit override for this launch only (fclaude to offload to the free lane),
+        // never a setting. The choices are whatever *claude is on PATH.
+        var exe = new ComboBox<String>();
+        exe.setEditable(true);
+        exe.getItems().addAll(AgentExe.candidates());
+        exe.setPromptText("(claude)");
+        exe.setPrefWidth(200);
+        var exeNote = new Label("claude   -   empty runs the usual claude; fclaude is the free lane, pclaude is for testing");
+        exeNote.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
+        var exeRow = new HBox(8, new Label("Claude"), exe, exeNote);
+        exeRow.setAlignment(Pos.CENTER_LEFT);
+        java.util.function.Supplier<String> exeNow = () -> exe.getEditor().getText().trim();
+
+        // What is wrong with the two choices above, or null. One answer for the preview and every action.
+        java.util.function.Supplier<String> problem = () -> {
+            try { PrpPrompt.modelFlag(modelNow.get()); }
+            catch (IllegalArgumentException e) { return "not a model name: " + modelNow.get() + "   (haiku, sonnet, opus or a full model id)"; }
+            try { AgentExe.require(exeNow.get()); }
+            catch (IllegalArgumentException e) { return e.getMessage(); }
+            return null;
+        };
+        java.util.function.BooleanSupplier modelOk = () -> problem.get() == null;
+
         // Read-only rather than a Label: it is long, it wraps, and being able to select part of it
         // is occasionally the fastest way to check one path in it.
         var command = new TextArea();
@@ -105,11 +142,15 @@ public final class AgentLaunchDialog {
 
         // Recomputed as the percentage changes, so what is shown is always what will run. A preview
         // that goes stale the moment a field is touched is worse than no preview.
-        java.util.function.Supplier<String> commandNow =
-                () -> PrpPrompt.command(prpFile, settings, tail.getValue(), sessionId, tabName.getText());
+        java.util.function.Supplier<String> commandNow = () -> modelOk.getAsBoolean()
+                ? PrpPrompt.command(prpFile, settings, tail.getValue(), sessionId, tabName.getText(), modelNow.get(),
+                        exeNow.get())
+                : problem.get();
         command.setText(commandNow.get());
         tail.valueProperty().addListener((o, a, b) -> command.setText(commandNow.get()));
         tabName.textProperty().addListener((o, a, b) -> command.setText(commandNow.get()));
+        model.getEditor().textProperty().addListener((o, a, b) -> command.setText(commandNow.get()));
+        exe.getEditor().textProperty().addListener((o, a, b) -> command.setText(commandNow.get()));
 
         var permissions = new Label(settings != null && settings.isAgentSkipPermissions()
                 ? "Permission prompts are OFF for this agent (" + PrpPrompt.SKIP_PERMISSIONS
@@ -126,7 +167,9 @@ public final class AgentLaunchDialog {
             if (slot > 8) break;                       // F9..F12 are spoken for below
             var key = KeyCode.valueOf("F" + slot++);
             Runnable go = () -> {
-                launch(t, prpFile, project, settings, tabName.getText(), tail.getValue(), sessionId);
+                if (!modelOk.getAsBoolean()) { Toast.show(problem.get()); return; }
+                launch(t, prpFile, project, settings, tabName.getText(), tail.getValue(), sessionId, modelNow.get(),
+                        exeNow.get());
                 stage.close();
             };
             keys.put(key, go);
@@ -134,10 +177,12 @@ public final class AgentLaunchDialog {
         }
 
         Runnable pasteMode = () -> {
+            if (!modelOk.getAsBoolean()) { Toast.show(problem.get()); return; }
             PrpActions.copy(PrpPrompt.of(prpFile, settings, tail.getValue()));
-            var empty = PrpPrompt.commandWithoutPrompt(settings, sessionId, tabName.getText());
+            var empty = PrpPrompt.commandWithoutPrompt(settings, sessionId, tabName.getText(), modelNow.get(),
+                    exeNow.get());
             var name = tabName.getText();
-            remember(sessionId, prpFile, project, name);
+            remember(sessionId, prpFile, project, name, exeNow.get());
             BackgroundLaunch.run(
                     () -> TerminalRunner.outcomeOf(null, project, empty, "prp-paste", settings, name),
                     outcome -> Toast.show(outcome == littlejlib.proj.terminal.RunOutcome.FAILED
@@ -152,6 +197,7 @@ public final class AgentLaunchDialog {
                 Palette.PURPLE, pasteMode));
 
         Runnable copyAll = () -> {
+            if (!modelOk.getAsBoolean()) { Toast.show(problem.get()); return; }
             PrpActions.copy(commandNow.get());
             Toast.show("command copied");
             stage.close();
@@ -167,7 +213,7 @@ public final class AgentLaunchDialog {
         var cancelRow = new HBox(cancel);
         cancelRow.setAlignment(Pos.CENTER_RIGHT);
 
-        var box = new VBox(9, heading, where, tabRow, tailRow, command, permissions, new Separator(),
+        var box = new VBox(9, heading, where, tabRow, tailRow, modelRow, exeRow, command, permissions, new Separator(),
                 new Label("Start it in:"), buttons, cancelRow);
         box.setPadding(new Insets(16));
 
@@ -188,12 +234,12 @@ public final class AgentLaunchDialog {
     }
 
     static void launch(TerminalLauncher terminal, Path prpFile, Path project, Settings settings,
-                       String tabName, int percent, String sessionId) {
-        var command = PrpPrompt.command(prpFile, settings, percent, sessionId, tabName);
+                       String tabName, int percent, String sessionId, String model, String exe) {
+        var command = PrpPrompt.command(prpFile, settings, percent, sessionId, tabName, model, exe);
         if (terminal.canRun()) {
             // Recorded BEFORE the launch rather than after it: the id is already in the command line
             // that is about to run, so the row is true either way, and the launch takes seconds.
-            remember(sessionId, prpFile, project, tabName);
+            remember(sessionId, prpFile, project, tabName, exe);
             Toast.show("starting " + tabName + " in " + terminal.getName() + " ...");
             BackgroundLaunch.run(
                     () -> TerminalRunner.outcomeOf(terminal, project, command,
@@ -209,7 +255,7 @@ public final class AgentLaunchDialog {
         }
         // It cannot be told to run something, so it is told to be somewhere, and the command is put
         // where one keystroke will produce it.
-        remember(sessionId, prpFile, project, tabName);
+        remember(sessionId, prpFile, project, tabName, exe);
         PrpActions.copy(command);
         if (TerminalRunner.openIn(terminal, project)) {
             Toast.show(terminal.getName() + " opened at the project root - the command is on the "
@@ -223,9 +269,9 @@ public final class AgentLaunchDialog {
      * The session and the name it was given, kept so this PRP can be resumed and so the name typed
      * here is the one offered next time - for this PRP, and for the next PRP of the same project.
      */
-    static void remember(String sessionId, Path prpFile, Path project, String tabName) {
+    static void remember(String sessionId, Path prpFile, Path project, String tabName, String exe) {
         littlejlib.proj.prp.PrpSessions.record(sessionId, prpFile,
-                PrpPrompt.indexOf(prpFile), project, tabName);
+                PrpPrompt.indexOf(prpFile), project, tabName, AgentExe.check(exe));
     }
 
     static String label(KeyCode key, TerminalLauncher t) {

@@ -5,7 +5,9 @@ import littlejlib.proj.util.AppPaths;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -23,31 +25,20 @@ public final class Launcher {
 
     /** Daemon-only: the client's own flags are not capped, since every CLI call is short-lived. Same shape as jacli-daemon. */
     static final java.util.List<String> MEMORY_CAPS = java.util.List.of(
-            "-Xmx768m", "-XX:+UseSerialGC", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30",
+            "-Xms16m", "-Xmx768m", "-XX:MaxNewSize=48m", "-XX:+UseSerialGC", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30",
             "-XX:MaxMetaspaceSize=256m", "-XX:MaxDirectMemorySize=256m", "-XX:ReservedCodeCacheSize=96m");
+
+    static final String JR_PROP = "io.github.jarrunner.jr.";
 
     static boolean isMemoryFlag(String a) {
         return a.startsWith("-Xmx") || a.startsWith("-Xms") || a.startsWith("-XX:MaxHeap")
-                || a.startsWith("-XX:MinHeap") || a.startsWith("-XX:MaxMetaspace")
+                || a.startsWith("-XX:MinHeap") || a.startsWith("-XX:MaxNewSize") || a.startsWith("-XX:MaxMetaspace")
                 || a.startsWith("-XX:MaxDirect") || a.startsWith("-XX:ReservedCodeCache")
                 || a.startsWith("-XX:+Use") && a.endsWith("GC");
     }
 
     public static Info startAndWait(Consumer<String> log) throws java.io.IOException {
-        var jar = Build.jar();
-        if (jar == null) throw new java.io.IOException(
-                "running from classes, not a jar - start the daemon by hand with --daemon");
-
-        var command = new ArrayList<String>();
-        command.add(javaBinary());
-        ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
-                .filter(a -> !a.startsWith("-agentlib") && !a.startsWith("-javaagent")
-                        && !a.startsWith("-XX:AOTCacheOutput") && !isMemoryFlag(a))
-                .forEach(command::add);
-        command.addAll(MEMORY_CAPS);
-        command.add("-jar");
-        command.add(jar.getAbsolutePath());
-        command.add("--daemon");
+        var command = command();
 
         Files.createDirectories(AppPaths.home());
         var pb = new ProcessBuilder(command);
@@ -64,6 +55,37 @@ public final class Launcher {
         }
         throw new java.io.IOException("daemon did not start within " + START_WAIT_MS
                 + "ms - see " + AppPaths.daemonLog());
+    }
+
+    /// Launched by a jr exe, the daemon is that exe again, so the JVM runs inside its process and
+    /// Task Manager shows `proj`, not `java`. The exe's baked VM args are kept, caps swapped in,
+    /// through `-Xjr:vm.args` rather than an environment variable the daemon's terminals would inherit.
+    static List<String> command() throws java.io.IOException {
+        var exe = System.getProperty(JR_PROP + "exe");
+        if (exe != null && Files.isRegularFile(Path.of(exe))) {
+            var vmArgs = new ArrayList<>(bakedVmArgs().stream().filter(a -> !isMemoryFlag(a)).toList());
+            vmArgs.addAll(MEMORY_CAPS);
+            return List.of(exe, "-Xjr:vm.args=" + String.join(" ", vmArgs), "--daemon");
+        }
+        var jar = Build.jar();
+        if (jar == null) throw new java.io.IOException(
+                "running from classes, not a jar - start the daemon by hand with --daemon");
+        var command = new ArrayList<String>();
+        command.add(javaBinary());
+        ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
+                .filter(a -> !a.startsWith("-agentlib") && !a.startsWith("-javaagent")
+                        && !a.startsWith("-XX:AOTCacheOutput") && !isMemoryFlag(a))
+                .forEach(command::add);
+        command.addAll(MEMORY_CAPS);
+        command.addAll(List.of("-jar", jar.getAbsolutePath(), "--daemon"));
+        return command;
+    }
+
+    static List<String> bakedVmArgs() {
+        var args = new ArrayList<String>();
+        for (var v = System.getProperty(JR_PROP + "jvm.vmArgs.0"); v != null;
+                v = System.getProperty(JR_PROP + "jvm.vmArgs." + args.size())) args.add(v);
+        return args;
     }
 
     public static void awaitExit(Info info, Consumer<String> log) {

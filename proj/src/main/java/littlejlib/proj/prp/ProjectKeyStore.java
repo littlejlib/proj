@@ -26,6 +26,15 @@ public class ProjectKeyStore {
         return row == null || row.key() == null || row.key().isBlank() ? null : row.key();
     }
 
+    /** Another existing folder that holds this key, or null. Rows of folders that moved are skipped. */
+    public String ownerOf(String key, Path project) {
+        var me = abs(project);
+        return query(db(), ProjectKey.TYPEDEF).eq($key, key).list().stream()
+                .map(ProjectKey::path)
+                .filter(p -> p != null && !p.equals(me) && java.nio.file.Files.isDirectory(Path.of(p)))
+                .findFirst().orElse(null);
+    }
+
     public void set(Path project, String key) {
         var db = db();
         db.transaction(() -> upsert(db, ProjectKey.TYPEDEF)

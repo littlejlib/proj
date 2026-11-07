@@ -19,7 +19,7 @@ import java.util.List;
 @Command(name = "prp-session", description = "The claude-code sessions recorded against a PRP")
 public class PrpSessionCmd implements Runnable {
 
-    @Parameters(index = "0", description = "name | list | record | key | set-key")
+    @Parameters(index = "0", description = "name | list | record | key | key-owner | set-key")
     String verb;
 
     @Parameters(index = "1..*", description = "arguments of the verb")
@@ -45,12 +45,14 @@ public class PrpSessionCmd implements Runnable {
                 need(args, 1);
                 for (var s : store.of(Path.of(args.get(0))))
                     out.println(String.join("\t", nz(s.sessionId()), nz(s.tabName()),
-                            String.valueOf(s.started()), nz(s.prpIndex()), nz(s.projectPath())));
+                            String.valueOf(s.started()), nz(s.prpIndex()), nz(s.projectPath()),
+                            nz(s.exe())));
             }
             case "record" -> {
                 need(args, 5);
                 store.record(args.get(0), Path.of(args.get(1)), blankToNull(args.get(2)),
-                        Path.of(args.get(3)), blankToNull(args.get(4)), System.currentTimeMillis());
+                        Path.of(args.get(3)), blankToNull(args.get(4)), System.currentTimeMillis(),
+                        args.size() > 5 ? blankToNull(args.get(5)) : null);
                 out.println("ok");
             }
             case "key" -> {
@@ -58,13 +60,20 @@ public class PrpSessionCmd implements Runnable {
                 var key = new littlejlib.proj.prp.ProjectKeyStore().of(Path.of(args.get(0)));
                 if (key != null) out.println(key);
             }
+            case "key-owner" -> {
+                need(args, 2);
+                var owner = new littlejlib.proj.prp.ProjectKeyStore()
+                        .ownerOf(args.get(0), Path.of(args.get(1)));
+                if (owner != null) out.println(owner);
+            }
             case "set-key" -> {
                 need(args, 2);
                 new littlejlib.proj.prp.ProjectKeyStore().set(Path.of(args.get(0)), args.get(1));
                 out.println("ok");
             }
             default -> {
-                err.println("unknown verb: " + verb + " (name | list | record | key | set-key)");
+                err.println("unknown verb: " + verb
+                        + " (name | list | record | key | key-owner | set-key)");
                 throw new IllegalArgumentException("unknown verb");
             }
         }

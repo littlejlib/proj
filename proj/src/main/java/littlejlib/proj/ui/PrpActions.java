@@ -4,6 +4,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.stage.Stage;
 import littlejlib.proj.Settings;
+import littlejlib.proj.prp.PrpResume;
 
 import java.util.function.Consumer;
 
@@ -81,7 +82,14 @@ public final class PrpActions {
             return;
         }
         var session = sessions.get(0);
-        var plan = littlejlib.proj.prp.PrpResume.plan(prpFile, session, settings, false);
+        PrpResume.Plan plan;
+        try {
+            plan = PrpResume.plan(prpFile, session, settings, false, null,
+                    ExeConfirm.programFor(session));
+        } catch (IllegalArgumentException e) {
+            say.accept(e.getMessage());
+            return;
+        }
         var more = sessions.size() > 1 ? "   (" + (sessions.size() - 1) + " older)" : "";
         say.accept("resuming " + session.tabName() + more + " ...");
         BackgroundLaunch.run(() -> littlejlib.proj.prp.PrpResume.launch(plan, settings, null),

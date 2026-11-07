@@ -30,8 +30,37 @@ public final class PrpResume {
     }
 
     public static Plan plan(Path prpFile, PrpSession session, Settings settings, boolean fork) {
+        return plan(prpFile, session, settings, fork, null);
+    }
+
+    /** @param model haiku, sonnet, opus or a model id to resume ON; null keeps the user's default */
+    public static Plan plan(Path prpFile, PrpSession session, Settings settings, boolean fork,
+                            String model) {
+        return plan(prpFile, session, settings, fork, model, null);
+    }
+
+    /** @param exe the program to resume ON (fclaude ...); null or blank means the template's own */
+    public static Plan plan(Path prpFile, PrpSession session, Settings settings, boolean fork,
+                            String model, String exe) {
         var project = session.project() != null ? session.project() : AgentLauncher.projectRootOf(prpFile);
-        return new Plan(project, session, command(session, settings, fork));
+        return new Plan(project, session, command(session, settings, fork, model, exe));
+    }
+
+    /**
+     * Which program to resume on. An explicit {@code --exe} is taken as given. Otherwise a session that
+     * ran on something other than the default is a question - resuming it on plain claude would move a
+     * free-lane conversation onto the paid account without anyone choosing that - so {@code confirm} is
+     * asked with the recorded name, and anything but a yes means the default.
+     *
+     * @return the explicit program, or null for the default
+     */
+    public static String exeFor(PrpSession session, String explicit,
+                                java.util.function.Predicate<String> confirm) {
+        var given = AgentExe.check(explicit);
+        if (given != null) return given;
+        var recorded = session == null ? null : session.exe();
+        if (AgentExe.isDefault(recorded)) return null;
+        return confirm.test(recorded.trim()) ? recorded.trim() : null;
     }
 
     /**
@@ -39,8 +68,19 @@ public final class PrpResume {
      * than the word "claude", so a machine running a different agent still gets its own.
      */
     public static String command(PrpSession session, Settings settings, boolean fork) {
-        var line = new StringBuilder(PrpPrompt.program(settings));
+        return command(session, settings, fork, null);
+    }
+
+    public static String command(PrpSession session, Settings settings, boolean fork, String model) {
+        return command(session, settings, fork, model, null);
+    }
+
+    public static String command(PrpSession session, Settings settings, boolean fork, String model,
+                                 String exe) {
+        var line = new StringBuilder(PrpPrompt.program(settings, exe));
         line.append(" --resume ").append(session.sessionId());
+        var flag = PrpPrompt.modelFlag(model);
+        if (!flag.isEmpty()) line.append(' ').append(flag);
         if (fork) line.append(" --fork-session");
         if (settings != null && settings.isAgentSkipPermissions())
             line.append(' ').append(PrpPrompt.SKIP_PERMISSIONS);

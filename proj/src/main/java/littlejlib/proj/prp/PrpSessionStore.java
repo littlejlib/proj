@@ -47,6 +47,11 @@ public class PrpSessionStore {
 
     public void record(String sessionId, Path prpFile, String prpIndex, Path projectDir,
                        String tabName, long startedAt) {
+        record(sessionId, prpFile, prpIndex, projectDir, tabName, startedAt, null);
+    }
+
+    public void record(String sessionId, Path prpFile, String prpIndex, Path projectDir,
+                       String tabName, long startedAt, String exe) {
         var db = db();
         db.transaction(() -> upsert(db, PrpSession.TYPEDEF)
                 .key($sessionId, sessionId)
@@ -55,7 +60,14 @@ public class PrpSessionStore {
                 .set($projectPath, abs(projectDir))
                 .set($tabName, tabName)
                 .set($startedAt, startedAt)
+                .set($exe, exe == null || exe.isBlank() ? null : exe.trim())
                 .save());
+    }
+
+    /** A remembered tab name with today's project name in front, so renaming the project reaches old PRPs. */
+    static String rekey(String tabName, String prpIndex, String key) {
+        var old = TabName.projectPartOf(tabName, prpIndex);
+        return old == null ? tabName : key + tabName.substring(old.length());
     }
 
     /**
@@ -64,10 +76,12 @@ public class PrpSessionStore {
      */
     public String tabName(Path prpFile) {
         var mine = latestOf(prpFile);
-        if (mine != null && mine.tabName() != null && !mine.tabName().isBlank()) return mine.tabName();
-
         var project = AgentLauncher.projectRootOf(prpFile);
-        var key = new ProjectKeyStore().of(project);
+        var named = ProjFile.nameOf(project);
+        if (mine != null && mine.tabName() != null && !mine.tabName().isBlank())
+            return named == null ? mine.tabName() : rekey(mine.tabName(), mine.prpIndex(), named);
+
+        var key = named != null ? named : new ProjectKeyStore().of(project);
         if (key == null) {
             // No key set, but a name used elsewhere in the project carries one in its first part -
             // which covers every row written before keys existed.

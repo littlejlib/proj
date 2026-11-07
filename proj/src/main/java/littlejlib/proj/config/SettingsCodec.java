@@ -618,6 +618,7 @@ public final class SettingsCodec {
         out.append("#              status file if it has one, and how much of the last session's\n");
         out.append("#              log to read. Each part appears only if that file exists.\n");
         out.append("#   %FLAGS%    the flags below, or nothing\n");
+        out.append("#   %MODEL%    --model <m> when 'prp agent --model <m>' is given, or nothing\n");
         out.append("#   %PRP%      the PRP path relative to the project, e.g. prp/14-prp-name.md\n");
         out.append("#   %PRP_ABS%  its absolute path\n");
         out.append("#   %PATH%     the project directory\n");

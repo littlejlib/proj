@@ -24,6 +24,7 @@ public final class PrpSession extends PrpSession_A {
     String projectPath;     // absolute project root, which is where the agent was started
     String tabName;
     Long startedAt;
+    String exe;             // the explicit program it ran on (fclaude ...); null when it was the default
 
     public static final TypeDef<PrpSession> TYPEDEF =
             schemaBuilder()

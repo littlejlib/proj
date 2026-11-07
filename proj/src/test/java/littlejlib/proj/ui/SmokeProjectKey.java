@@ -30,7 +30,7 @@ public class SmokeProjectKey {
         var done = new CountDownLatch(1);
         Platform.runLater(() -> {
             try {
-                var pane = ProjectKeyDialog.build(project).getDialogPane();
+                var pane = ProjectDialog.build(project).getDialogPane();
                 // A DialogPane needs a Scene before it will lay out, and it has none until shown.
                 var holder = new VBox(pane);
                 new Scene(holder);

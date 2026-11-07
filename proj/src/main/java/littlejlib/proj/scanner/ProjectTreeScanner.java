@@ -181,6 +181,11 @@ public class ProjectTreeScanner {
         return rec.maven() && Files.isDirectory(dir.resolve("src"));
     }
 
+    /** The watcher's version: nothing below a leaf is ever a row, so nothing below it is worth a watch. */
+    static boolean isLeafDir(Path dir) {
+        return Files.isRegularFile(dir.resolve("pom.xml")) && Files.isDirectory(dir.resolve("src"));
+    }
+
     List<Path> childDirs(Path dir) {
         try (var entries = Files.list(dir)) {
             return entries.filter(Files::isDirectory)

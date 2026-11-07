@@ -20,7 +20,19 @@ public final class Restorer {
     static final int TAIL = 1 << 20;
 
     public static String command(HibRecord r, Settings settings) {
-        var line = new StringBuilder(PrpPrompt.program(settings)).append(" --resume ").append(r.sessionId());
+        return command(r, settings, null);
+    }
+
+    /** @param model haiku, sonnet, opus or a model id to restore ON; null keeps the user's default */
+    public static String command(HibRecord r, Settings settings, String model) {
+        return command(r, settings, model, null);
+    }
+
+    /** @param exe the program to restore ON (fclaude ...); null keeps the template's own */
+    public static String command(HibRecord r, Settings settings, String model, String exe) {
+        var line = new StringBuilder(PrpPrompt.program(settings, exe)).append(" --resume ").append(r.sessionId());
+        var flag = PrpPrompt.modelFlag(model);
+        if (!flag.isEmpty()) line.append(' ').append(flag);
         var mode = r.permissionMode() != null ? r.permissionMode() : transcript(r).map(Restorer::lastPermissionMode).orElse(null);
         if ("bypassPermissions".equals(mode)) line.append(' ').append(PrpPrompt.SKIP_PERMISSIONS);
         else if (mode != null && !mode.isBlank() && !"default".equals(mode)) line.append(" --permission-mode ").append(mode);
@@ -40,7 +52,15 @@ public final class Restorer {
     }
 
     public static RunOutcome restore(HibRecord r, Settings settings) {
-        var outcome = TerminalRunner.outcomeOf(null, Path.of(r.cwd()), command(r, settings), "hib-restore",
+        return restore(r, settings, null);
+    }
+
+    public static RunOutcome restore(HibRecord r, Settings settings, String model) {
+        return restore(r, settings, model, null);
+    }
+
+    public static RunOutcome restore(HibRecord r, Settings settings, String model, String exe) {
+        var outcome = TerminalRunner.outcomeOf(null, Path.of(r.cwd()), command(r, settings, model, exe), "hib-restore",
                 settings, r.name(), true);
         if (outcome != RunOutcome.FAILED) {
             r.state(HibRecord.RESTORED).restoredAt(System.currentTimeMillis());

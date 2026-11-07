@@ -59,6 +59,7 @@ public final class WorkspaceAutoRefresh {
                 var rows = WorkspaceRefresh.run(group, false, null, note -> Server.log("  " + note));
                 Server.log("plain group '" + group.slug() + "': " + rows.size() + " folders in "
                         + (System.currentTimeMillis() - t0) + " ms");
+                Server.touched();
             }
         } catch (Exception e) {
             Server.log("plain group refresh failed: " + e);

@@ -7,6 +7,7 @@ import littlejlib.proj.scanner.ScanProgress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -39,6 +40,9 @@ public final class WorkspaceRefresh {
     static final CopyOnWriteArrayList<Consumer<String>> listeners = new CopyOnWriteArrayList<>();
     static final Set<String> running = ConcurrentHashMap.newKeySet();
 
+    /** What this process knows of each group's last write, so the clock never has to ask the index again. */
+    static final Map<String, Long> scannedAt = new ConcurrentHashMap<>();
+
     /** Called with the group slug once new rows are stored, on the scanning thread. */
     public static void onRefreshed(Consumer<String> listener) {
         if (listener != null) listeners.add(listener);
@@ -64,6 +68,7 @@ public final class WorkspaceRefresh {
         try {
             var stamp = System.currentTimeMillis();
             for (var base : group.basePaths()) scanBase(group, base, forced, progress, note, store, stamp);
+            scannedAt.put(group.slug(), stamp);
             listeners.forEach(l -> l.accept(group.slug()));
             return store.loadGroup(group.slug());
         } finally {
@@ -116,7 +121,8 @@ public final class WorkspaceRefresh {
 
     public static boolean due(ProjectGroup group, int minutes) {
         if (minutes <= 0 || group == null) return false;
-        var last = lastScanned(group);
+        var last = scannedAt.getOrDefault(group.slug(), -1L);
+        if (last < 0 && (last = lastScanned(group)) >= 0) scannedAt.put(group.slug(), last);
         if (last < 0) return false;
         return last == 0 || System.currentTimeMillis() - last >= minutes * 60_000L;
     }

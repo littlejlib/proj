@@ -199,6 +199,10 @@ public class Main implements Runnable {
                 // CLI mode - use Picocli to parse and execute command
                 Main mainCmd = new Main();
                 CommandLine cmd = new CommandLine(mainCmd);
+                cmd.setOut(new java.io.PrintWriter(StdoutChannel.data(), true));
+                if (LaunchMode.stdoutCaptured()) {
+                    cmd.setColorScheme(CommandLine.Help.defaultColorScheme(CommandLine.Help.Ansi.OFF));
+                }
 
                 // Execute command (this will parse and set verboseOpt)
                 int exitCode = cmd.execute(args);
@@ -774,6 +778,7 @@ public class Main implements Runnable {
      * way in that does not require a display.
      */
     @Command(name = "prp", aliases = {"p"}, description = "Manage Project Requirement Prompts (PRPs)",
+             mixinStandardHelpOptions = true,
              subcommands = {
                  littlejlib.proj.cli.PrpCommands.NewCmd.class,
                  littlejlib.proj.cli.PrpCommands.ListCmd.class,
@@ -788,8 +793,14 @@ public class Main implements Runnable {
                  littlejlib.proj.cli.PrpCommands.DirCmd.class
              })
     static class PrpCommand implements Runnable {
+        @CommandLine.Spec CommandLine.Model.CommandSpec spec;
+
         @Override
         public void run() {
+            if (!LaunchMode.stdinIsTerminal()) {
+                spec.commandLine().usage(spec.commandLine().getOut());
+                return;
+            }
             try {
                 AITemplateManager.manageTemplatesUI(settings);
             } catch (Exception e) {
@@ -1146,10 +1157,11 @@ public class Main implements Runnable {
             System.out.println("  prp list         List a project's PRPs   --dir --open-only --json");
             System.out.println("  prp show <n>     Every file belonging to one PRP   --dir --json");
             System.out.println("  prp agent <n>    Open a terminal at the PROJECT root running a coding");
-            System.out.println("                   agent on that PRP   --dir --print   (alias: prp claude)");
-            System.out.println("  prp new <name> --agent    create it and start the agent in one step");
+            System.out.println("                   agent on that PRP   --dir --print --model --exe   (alias: prp claude)");
+            System.out.println("  prp new <name> --agent    create it and start the agent in one step   --model --exe");
             System.out.println("  prp resume [n]    Resume the conversation that PRP already had");
-            System.out.println("                   --list --session <id> --fork --print --remember --dir");
+            System.out.println("                   --list --session <id> --fork --model --exe --print --remember --dir");
+            System.out.println("                   (--exe fclaude: which claude, by bare name from PATH)");
             System.out.println("  prp key [name]   This project's short name, so PRP 38 reads");
             System.out.println("                   billing-38 - a ticket id   --dir");
             System.out.println("  prp dir          Print the prp folder these act on   --dir");
@@ -1162,7 +1174,7 @@ public class Main implements Runnable {
             System.out.println("  hib ls           Running ones: idle, RAM, committed   --full --json");
             System.out.println("  hib tab <name>   Hibernate others   --force --anyway --dry-run");
             System.out.println("  hib parked       Hibernated ones   [filter] --was --all --json");
-            System.out.println("  hib restore <n>  Reopen in a new tab with claude --resume   --print --again");
+            System.out.println("  hib restore <n>  Reopen in a new tab with claude --resume   --print --again --model --exe");
             System.out.println("  hib suggest      Idle ones worth hibernating; dry run unless --apply, which");
             System.out.println("                   asks in a window (F2)   --min-idle <minutes> --json");
             System.out.println("  hib ui           The picker's Conversations tab (F8 hibernate, F9 restore)");

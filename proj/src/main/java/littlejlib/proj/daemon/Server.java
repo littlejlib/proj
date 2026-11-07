@@ -13,6 +13,8 @@ import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -44,9 +46,12 @@ public class Server {
     final TrayUi tray = new TrayUi();
     final WorkspaceAutoRefresh workspaces = new WorkspaceAutoRefresh();
 
+    static final Duration IDLE_TRIM_AFTER = Duration.ofMinutes(2);
+
     ServerSocket serverSocket;
     ProjectWatcher watcher;
     volatile boolean running = true;
+    static volatile Instant lastActivity = Instant.now();
 
     public void run() throws Exception {
         System.setProperty("java.awt.headless", "false");
@@ -80,6 +85,7 @@ public class Server {
         installSummonKey(settings);
         workspaces.start();
         tray.note("ready");
+        IdleTrim.start(() -> PickerHost.isShowing() ? Instant.now() : lastActivity, IDLE_TRIM_AFTER);
         mark("accepting requests");
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::cleanup, "proj-daemon-shutdown"));
@@ -94,6 +100,11 @@ public class Server {
         }
     }
 
+    /** Anything the daemon does on its own counts too, or the idle trim runs before a background walk and never after. */
+    static void touched() {
+        lastActivity = Instant.now();
+    }
+
     static void mark(String what) {
         log(what + "   +" + littlejlib.proj.util.Boot.ms() + "ms");
         System.out.flush();
@@ -105,6 +116,8 @@ public class Server {
             Protocol.write(socket.getOutputStream(), handle(request));
         } catch (Exception e) {
             log("request failed: " + e.getMessage());
+        } finally {
+            touched();
         }
     }
 
@@ -235,6 +248,7 @@ public class Server {
             tray.note("picker open");
             var result = ProjectPickerDialog.show(browsePaths(settings), settings);
             tray.note("ready");
+            touched();
 
             if (result != null && result.absolutePath() != null) {
                 littlejlib.proj.terminal.TerminalRunner.open(result.absolutePath(), settings);
@@ -272,7 +286,7 @@ public class Server {
     void startWatcher() {
         var settings = new SettingsManager().loadSettings();
         if (settings == null) return;
-        watcher = new ProjectWatcher(settings.getProjectScanningDepth());
+        watcher = new ProjectWatcher(settings.getProjectScanningDepth()).onActivity(Server::touched);
         var paths = browsePaths(settings);
         new Thread(() -> {
             var t0 = littlejlib.proj.util.Boot.ms();

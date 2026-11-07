@@ -81,13 +81,25 @@ public final class PrpPrompt {
      */
     public static String command(Path prpFile, Settings settings, int percent,
                                  String sessionId, String tabName) {
+        return command(prpFile, settings, percent, sessionId, tabName, null);
+    }
+
+    /** @param model what {@code %MODEL%} becomes: {@code --model <model>}, or nothing when null or blank */
+    public static String command(Path prpFile, Settings settings, int percent,
+                                 String sessionId, String tabName, String model) {
+        return command(prpFile, settings, percent, sessionId, tabName, model, null);
+    }
+
+    /** @param exe the program to run instead of the template's own (fclaude, pclaude ...); null keeps it */
+    public static String command(Path prpFile, Settings settings, int percent,
+                                 String sessionId, String tabName, String model, String exe) {
         var project = AgentLauncher.projectRootOf(prpFile);
 
         // The TEMPLATE is expanded first and the PROMPT substituted into the result, never the
         // other way round. A PRP whose file name happened to contain %FLAGS% would otherwise have
         // it expanded, which is a placeholder injected by a file name - a small hole, and free to
         // close by ordering the two substitutions.
-        return shell(settings, sessionId, tabName)
+        return shell(settings, sessionId, tabName, model, exe)
                 .replace("%PRP%", relative(project, prpFile))
                 .replace("%PRP_ABS%", prpFile.toAbsolutePath().toString())
                 .replace("%PATH%", project.toAbsolutePath().toString())
@@ -100,7 +112,15 @@ public final class PrpPrompt {
      * {@code %FLAGS%} takes the space in front of it.
      */
     static String shell(Settings settings, String sessionId, String tabName) {
-        var filled = withFlags(AgentLauncher.templateOf(settings), settings)
+        return shell(settings, sessionId, tabName, null);
+    }
+
+    static String shell(Settings settings, String sessionId, String tabName, String model) {
+        return shell(settings, sessionId, tabName, model, null);
+    }
+
+    static String shell(Settings settings, String sessionId, String tabName, String model, String exe) {
+        var filled = withModel(withFlags(AgentExe.withExe(AgentLauncher.templateOf(settings), exe), settings), model)
                 .replace("%SESSION%", sessionId == null ? AgentLauncher.newSessionId() : sessionId);
         if (tabName != null && !tabName.isBlank()) return filled.replace("%NAME%", tabName.trim());
         return filled.replace(" --name \"%NAME%\"", "").replace(" --name %NAME%", "")
@@ -126,6 +146,29 @@ public final class PrpPrompt {
         return template.replace(" %FLAGS%", "").replace("%FLAGS%", "");
     }
 
+    static final java.util.regex.Pattern MODEL_ID = java.util.regex.Pattern.compile("[A-Za-z0-9._-]+");
+
+    /**
+     * Expands {@code %MODEL%} to {@code --model <model>}, or to nothing with the space in front of
+     * it. The value lands in a shell command line, so anything but a plain model name or id is refused.
+     */
+    static String withModel(String template, String model) {
+        var flag = modelFlag(model);
+        if (flag.isEmpty()) return template.replace(" %MODEL%", "").replace("%MODEL%", "");
+        return template.replace("%MODEL%", flag);
+    }
+
+    /** The names offered where a person picks a model; any full model id is accepted as well. */
+    public static final java.util.List<String> MODELS = java.util.List.of("haiku", "sonnet", "opus");
+
+    /** {@code --model <m>}, or "" for null or blank. Refuses anything that is not a plain name or id. */
+    public static String modelFlag(String model) {
+        if (model == null || model.isBlank()) return "";
+        var m = model.trim();
+        if (!MODEL_ID.matcher(m).matches()) throw new IllegalArgumentException("not a model name: " + model);
+        return "--model " + m;
+    }
+
     /**
      * The command with the instruction left OFF - {@code claude --dangerously-skip-permissions} and
      * nothing more.
@@ -143,13 +186,30 @@ public final class PrpPrompt {
     }
 
     public static String commandWithoutPrompt(Settings settings, String sessionId, String tabName) {
-        return shell(settings, sessionId, tabName)
+        return commandWithoutPrompt(settings, sessionId, tabName, null);
+    }
+
+    public static String commandWithoutPrompt(Settings settings, String sessionId, String tabName,
+                                              String model) {
+        return commandWithoutPrompt(settings, sessionId, tabName, model, null);
+    }
+
+    public static String commandWithoutPrompt(Settings settings, String sessionId, String tabName,
+                                              String model, String exe) {
+        return shell(settings, sessionId, tabName, model, exe)
                 .replace("\"%PROMPT%\"", "").replace("%PROMPT%", "")
                 .replaceAll("\\s+", " ").trim();
     }
 
     /** The program the template runs, so a resume line does not have to assume it is claude. */
     public static String program(Settings settings) {
+        return program(settings, null);
+    }
+
+    /** @param exe an explicit program that wins over the template's own; null or blank keeps it */
+    public static String program(Settings settings, String exe) {
+        var e = AgentExe.check(exe);
+        if (e != null) return e;
         var argv = littlejlib.proj.util.Cmd.parse(AgentLauncher.templateOf(settings));
         return argv.length == 0 ? "claude" : argv[0];
     }

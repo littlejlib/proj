@@ -1,6 +1,8 @@
 package littlejlib.proj.cli;
 
 import littlejlib.proj.SettingsManager;
+import littlejlib.proj.prp.AgentExe;
+import littlejlib.proj.prp.AgentLauncher;
 import littlejlib.proj.prp.PrpCreator;
 import littlejlib.proj.prp.PrpLogExport;
 import littlejlib.proj.prp.PrpResume;
@@ -47,6 +49,16 @@ public class PrpResumeCmd implements Runnable {
     @Option(names = "--fork", description = "Resume into a NEW session, leaving the original untouched")
     boolean fork;
 
+    @Option(names = "--model", paramLabel = "<model>",
+            description = "Model to resume on: haiku, sonnet, opus or a full model id. Without it claude takes its default")
+    String model;
+
+    @Option(names = "--exe", paramLabel = "<name>",
+            description = "Which claude to resume on, by bare name (fclaude, pclaude ...), found on PATH. "
+                    + "Without it a session that was recorded on another claude asks first, and no answer "
+                    + "in 10 seconds means plain claude")
+    String exe;
+
     @Option(names = "--continue", description = "A conversation parked by the PreCompact hook: resume it whole, without asking")
     boolean continueParked;
 
@@ -64,6 +76,13 @@ public class PrpResumeCmd implements Runnable {
 
     @Override
     public void run() {
+        try {
+            exe = AgentExe.require(exe);
+        } catch (IllegalArgumentException e) {
+            PrpCommands.ERR.println(e.getMessage());
+            System.exit(2);
+            return;
+        }
         var prpDir = PrpCommands.prpDir(dir);
         List<littlejlib.proj.prp.PrpEntry> all;
         try {
@@ -107,13 +126,28 @@ public class PrpResumeCmd implements Runnable {
         }
 
         var settings = new SettingsManager().loadSettings();
+        var program = PrpResume.exeFor(chosen, exe, dryRun
+                ? recorded -> {
+                    PrpCommands.ERR.println("recorded on " + recorded + " - a real resume asks which to use; showing plain claude");
+                    return false;
+                }
+                : ResumeChoice::askExe);
+        if (program != null) {
+            try {
+                AgentExe.require(program);
+            } catch (IllegalArgumentException e) {
+                PrpCommands.ERR.println(e.getMessage());
+                System.exit(2);
+                return;
+            }
+        }
         var parked = ResumeChoice.parked(chosen.sessionId());
         var wantFresh = parked != null && (fresh || !continueParked && !dryRun && ResumeChoice.askFresh());
         if (wantFresh) {
-            startFresh(entry.getMainFile(), settings, parked);
+            startFresh(entry.getMainFile(), settings, parked, program);
             return;
         }
-        var plan = PrpResume.plan(entry.getMainFile(), chosen, settings, fork);
+        var plan = PrpResume.plan(entry.getMainFile(), chosen, settings, fork, model, program);
         if (dryRun) {
             PrpCommands.OUT.println("directory  " + plan.projectDir());
             PrpCommands.OUT.println("tab        " + chosen.tabName());
@@ -140,16 +174,17 @@ public class PrpResumeCmd implements Runnable {
     }
 
     /** The new session's prompt is the PRP, its status file and the tail of the newest log: what {@code proj prp prompt} prints. */
-    void startFresh(Path prpFile, littlejlib.proj.Settings settings, littlejlib.proj.hib.HibRecord parked) {
+    void startFresh(Path prpFile, littlejlib.proj.Settings settings, littlejlib.proj.hib.HibRecord parked,
+                    String program) {
         if (dryRun) {
-            var plan = littlejlib.proj.prp.AgentLauncher.plan(prpFile, settings);
+            var plan = AgentLauncher.planWith(prpFile, settings, model, program);
             PrpCommands.OUT.println("directory  " + plan.projectDir());
             PrpCommands.OUT.println("tab        " + plan.tabName());
             PrpCommands.OUT.println("command    " + plan.command());
             return;
         }
         ResumeChoice.restored(parked, "started fresh");
-        PrpCommands.startAgent(prpFile, newTerminal);
+        PrpCommands.startAgent(prpFile, newTerminal, model, program);
     }
 
     /**
@@ -166,7 +201,7 @@ public class PrpResumeCmd implements Runnable {
             return;
         }
         var name = tab != null && !tab.isBlank() ? tab.trim() : PrpSessions.tabName(prpFile);
-        PrpSessions.record(id, prpFile, entry.getIndex(), project, name);
+        PrpSessions.record(id, prpFile, entry.getIndex(), project, name, exe);
         PrpCommands.OUT.println("PRP " + entry.getIndex() + "  " + id + "  as  " + name);
     }
 

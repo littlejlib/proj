@@ -300,11 +300,11 @@ public final class WorkspacePane {
         }
         // A key belongs to a project whether or not that project builds. These rows are cases,
         // books and campaigns, and they get ticket numbers exactly like the code ones.
-        var key = Chip.of("Alt+K project key", Palette.GREY);
+        var key = Chip.of("Alt+K project", Palette.GREY);
         key.setCursor(javafx.scene.Cursor.HAND);
         key.setTooltip(new Tooltip("Set this folder's short name, so its PRP 3 reads "
                 + "<key>-03 and its terminal tab <key>-03-<task>"));
-        key.setOnMouseClicked(e -> ProjectKeyDialog.show(null, selectedDir(),
+        key.setOnMouseClicked(e -> ProjectDialog.show(null, selectedDir(),
                 () -> { if (prpOpen()) prpPanel.reload(); }));
         legend.getChildren().add(key);
         // F12 was bound here from the start and said nowhere, which on a tab whose bases are a

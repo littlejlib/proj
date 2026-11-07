@@ -142,7 +142,7 @@ public final class PrpPanel {
         for (var a : PrpAction.values()) {
             pane.getChildren().add(Chip.of(a.legendText(), a.style, a.icon, a.iconColor));
         }
-        pane.getChildren().add(Chip.of("Alt+K project key", Palette.GREY));
+        pane.getChildren().add(Chip.of("Alt+K project", Palette.GREY));
         pane.getChildren().add(Chip.of("F12 refresh", Palette.GREY));
         if (onClose != null) pane.getChildren().add(Chip.of("Esc close panel", Palette.GREY));
         return pane;

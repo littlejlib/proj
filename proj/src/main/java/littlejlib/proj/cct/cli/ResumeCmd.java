@@ -5,6 +5,8 @@ import module java.base;
 import picocli.CommandLine.*;
 import littlejlib.proj.cct.action.*;
 import littlejlib.proj.cct.db.Db;
+import littlejlib.proj.prp.AgentExe;
+import littlejlib.proj.prp.PrpPrompt;
 
 @Command(name = "resume", description = "Print the command that gets you back into a session.")
 public final class ResumeCmd implements Callable<Integer> {
@@ -23,6 +25,14 @@ public final class ResumeCmd implements Callable<Integer> {
     @Option(names = {"-y", "--skip-permissions"}, description = "Add --dangerously-skip-permissions to the command.")
     boolean skipPermissions;
 
+    @Option(names = "--model", paramLabel = "<model>",
+        description = "Add --model <model> to the command: haiku, sonnet, opus or a full model id.")
+    String model;
+
+    @Option(names = "--exe", paramLabel = "<name>",
+        description = "Use this claude in the command, by bare name (fclaude, pclaude ...), found on PATH.")
+    String exe;
+
     @Option(names = "--block", description = "Print a pasteable block: title, id, folder and both commands.")
     boolean block;
 
@@ -31,6 +41,12 @@ public final class ResumeCmd implements Callable<Integer> {
 
     @Override
     public Integer call() {
+        try {
+            exe = AgentExe.require(exe);
+        } catch (IllegalArgumentException e) {
+            Out.note(e.getMessage());
+            return 2;
+        }
         var db = Db.get();
         try {
             var found = Sessions.byPrefix(db.db(), session);
@@ -52,8 +68,11 @@ public final class ResumeCmd implements Callable<Integer> {
 
     private String command(littlejlib.proj.cct.model.SessionDoc s) {
         if (block) return ResumeCommands.block(s);
-        if (bare) return ResumeCommands.bare(s);
+if (bare) {
+    var flag = littlejlib.proj.prp.PrpPrompt.modelFlag(model);
+    return ResumeCommands.bare(s, exe) + (flag.isEmpty() ? "" : " " + flag);
+}
         var kind = littlejlib.proj.cct.action.ShellKind.of(shell);
-        return ResumeCommands.in(kind, s, skipPermissions, fork);
+        return ResumeCommands.in(kind, s, skipPermissions, fork, model, exe);
     }
 }

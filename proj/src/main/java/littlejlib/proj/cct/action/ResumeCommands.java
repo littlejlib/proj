@@ -3,6 +3,7 @@ package littlejlib.proj.cct.action;
 import module java.base;
 
 import littlejlib.proj.cct.model.SessionDoc;
+import littlejlib.proj.prp.PrpPrompt;
 
 public final class ResumeCommands {
 
@@ -10,12 +11,28 @@ public final class ResumeCommands {
 
     public static final String SKIP = "--dangerously-skip-permissions";
 
-    public static String bare(SessionDoc s) { return "claude --resume " + s.sessionId(); }
+    public static String bare(SessionDoc s) { return bare(s, null); }
+
+    public static String bare(SessionDoc s, String exe) {
+        return PrpPrompt.program(null, exe)
+                + " --resume " + s.sessionId();
+    }
 
     public static String forThisPlatform(SessionDoc s) { return in(ShellKind.preferred(), s, false, false); }
 
     public static String in(ShellKind shell, SessionDoc s, boolean skip, boolean fork) {
-        var tail = new StringBuilder("claude --resume ").append(s.sessionId());
+        return in(shell, s, skip, fork, null);
+    }
+
+    public static String in(ShellKind shell, SessionDoc s, boolean skip, boolean fork, String model) {
+        return in(shell, s, skip, fork, model, null);
+    }
+
+    /** @param exe the program to resume on (fclaude ...); null or blank is plain claude */
+    public static String in(ShellKind shell, SessionDoc s, boolean skip, boolean fork, String model, String exe) {
+        var tail = new StringBuilder(bare(s, exe));
+        var flag = littlejlib.proj.prp.PrpPrompt.modelFlag(model);
+        if (!flag.isEmpty()) tail.append(' ').append(flag);
         if (fork) tail.append(" --fork-session");
         if (skip) tail.append(' ').append(SKIP);
         var cwd = s.cwd();

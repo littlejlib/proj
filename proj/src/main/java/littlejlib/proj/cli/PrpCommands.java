@@ -5,6 +5,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import littlejlib.proj.SettingsManager;
+import littlejlib.proj.prp.AgentExe;
+import littlejlib.proj.prp.AgentLauncher;
 import littlejlib.proj.prp.PrpCreator;
 import littlejlib.proj.prp.PrpEntry;
 import littlejlib.proj.prp.PrpLogExport;
@@ -76,6 +78,14 @@ public final class PrpCommands {
                 + "running the coding agent with this PRP as its instruction")
         boolean agent;
 
+        @Option(names = "--model", paramLabel = "<model>",
+                description = "With --agent: the model the agent runs on (haiku, sonnet, opus or a full model id)")
+        String model;
+
+        @Option(names = "--exe", paramLabel = "<name>",
+                description = "With --agent: which claude to run, by bare name (fclaude, pclaude ...), found on PATH")
+        String exe;
+
         @Option(names = "--force", description = "Create it even though a PRP of that name already exists")
         boolean force;
 
@@ -86,6 +96,19 @@ public final class PrpCommands {
         public void run() {
             var target = prpDir(dir);
             try {
+                // Before the PRP exists: a bad model must not leave behind a PRP that was meant to start an agent.
+                if (model != null && !model.isBlank() && !agent) {
+                    ERR.println("--model needs --agent");
+                    System.exit(2);
+                    return;
+                }
+                littlejlib.proj.prp.PrpPrompt.modelFlag(model);
+                if (exe != null && !exe.isBlank() && !agent) {
+                    ERR.println("--exe needs --agent");
+                    System.exit(2);
+                    return;
+                }
+                exe = AgentExe.require(exe);
                 var created = PrpCreator.create(target, String.join(" ", name), index,
                         new SettingsManager().loadSettings(), force);
 
@@ -104,7 +127,7 @@ public final class PrpCommands {
                     littlejlib.proj.ui.PrpManagerActions
                             .openInEditor(created.file(), new SettingsManager().loadSettings());
                 }
-                if (agent) startAgent(created.file());
+                if (agent) startAgent(created.file(), false, model, exe);
             } catch (java.nio.file.FileAlreadyExistsException e) {
                 ERR.println("a PRP of that name already exists: " + e.getFile());
                 ERR.println("pass --force to create another, or --index to place it deliberately");
@@ -211,7 +234,7 @@ public final class PrpCommands {
      * The step that goes wrong is the navigation - starting inside prp/ gives the agent a folder of
      * markdown and none of the code - so the working directory here is always the project root.
      */
-    @Command(name = "agent", aliases = "claude",
+    @Command(name = "agent", aliases = "claude", mixinStandardHelpOptions = true,
             description = "Open a terminal at the project root running a coding agent on a PRP")
     public static class AgentCmd implements Runnable {
 
@@ -220,6 +243,16 @@ public final class PrpCommands {
 
         @Option(names = {"-d", "--dir"}, description = "Project directory; defaults to the current directory")
         String dir;
+
+        @Option(names = "--model", paramLabel = "<model>",
+                description = "Model the agent runs on: haiku, sonnet, opus or a full model id. "
+                        + "Without it the agent takes the default of the user's claude settings")
+        String model;
+
+        @Option(names = "--exe", paramLabel = "<name>",
+                description = "Which claude to run, by bare name: fclaude, pclaude ... Found on PATH, so no "
+                        + ".cmd, .bat, .exe or .sh. For this launch only; without it the usual claude runs")
+        String exe;
 
         @Option(names = "--print", description = "Print what would run and exit, without opening a terminal")
         boolean dryRun;
@@ -233,6 +266,7 @@ public final class PrpCommands {
         public void run() {
             var project = projectDir(dir);
             try {
+                exe = AgentExe.require(exe);
                 var prp = littlejlib.proj.prp.AgentLauncher.findPrp(project, index);
                 if (prp == null) {
                     ERR.println("no PRP " + index + " under " + PrpCreator.prpDirOf(project));
@@ -241,7 +275,7 @@ public final class PrpCommands {
                 }
                 if (dryRun) {
                     var s = new SettingsManager().loadSettings();
-                    var plan = littlejlib.proj.prp.AgentLauncher.plan(prp, s);
+                    var plan = AgentLauncher.planWith(prp, s, model, exe);
                     // The terminal that will RUN it, which is not always the preferred one - naming
                     // the preferred terminal here when it cannot run a command would be a dry run
                     // that describes something other than what is about to happen.
@@ -254,15 +288,21 @@ public final class PrpCommands {
                             + (runner != null && !runner.getName().equals(preferred.getName())
                                 ? "   (" + preferred.getName() + " cannot run a command)" : ""));
                     OUT.println("tab        " + plan.tabName());
+                    OUT.println("model      " + (model == null || model.isBlank() ? "(settings default)" : model.trim()));
+                    OUT.println("exe        " + (exe == null ? "(template default)"
+                            : exe + "  ->  " + AgentExe.resolve(exe)));
                     OUT.println("runs in    "
                             + (littlejlib.proj.terminal.TerminalRunner.startsHere(newTerminal)
                             ? "this terminal" : "a new " + (runner == null ? "terminal" : runner.getName()) + " tab"));
                     OUT.println("command    " + plan.command());
                     return;
                 }
-                startAgent(prp, newTerminal);
+                startAgent(prp, newTerminal, model, exe);
             } catch (NumberFormatException e) {
                 ERR.println("not a PRP index: " + index);
+                System.exit(2);
+            } catch (IllegalArgumentException e) {
+                ERR.println(e.getMessage());
                 System.exit(2);
             } catch (IOException e) {
                 ERR.println("could not read the prp folder: " + e.getMessage());
@@ -272,15 +312,25 @@ public final class PrpCommands {
     }
 
     static void startAgent(Path prpFile) {
-        startAgent(prpFile, false);
+        startAgent(prpFile, false, null);
+    }
+
+    static void startAgent(Path prpFile, boolean newTerminal) {
+        startAgent(prpFile, newTerminal, null);
     }
 
     /**
      * @param newTerminal open another terminal even though this one would do
+     * @param model      haiku, sonnet, opus or a model id; null leaves it to the user's settings
      */
-    static void startAgent(Path prpFile, boolean newTerminal) {
+    static void startAgent(Path prpFile, boolean newTerminal, String model) {
+        startAgent(prpFile, newTerminal, model, null);
+    }
+
+    /** @param exe an explicit program (fclaude ...) instead of the template's own; null keeps it */
+    static void startAgent(Path prpFile, boolean newTerminal, String model, String exe) {
         var settings = new SettingsManager().loadSettings();
-        var plan = littlejlib.proj.prp.AgentLauncher.plan(prpFile, settings);
+        var plan = AgentLauncher.planWith(prpFile, settings, model, exe);
 
         // Recorded BEFORE anything runs. A session that was never recorded cannot be resumed, and
         // the queued case leaves no moment afterwards: the shell runs the command once we exit.

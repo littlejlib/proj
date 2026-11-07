@@ -19,7 +19,7 @@ import static java.lang.foreign.ValueLayout.*;
  */
 public final class LaunchMode {
 
-    static MethodHandle GetStdHandle, GetFileType, GetConsoleWindow;
+    static MethodHandle GetStdHandle, GetFileType, GetConsoleWindow, GetConsoleMode;
 
     /** True when a real console window is attached, i.e. a human is watching a terminal. */
     public static boolean hasConsole() {
@@ -51,6 +51,20 @@ public final class LaunchMode {
         }
     }
 
+    /** True when stdin is a keyboard, so a window may be opened for a person; false for a pipe, a file or NUL. */
+    public static boolean stdinIsTerminal() {
+        if (!windows()) return System.console() != null && System.console().isTerminal();
+        try {
+            bind();
+            var h = (MemorySegment) GetStdHandle.invokeExact(-10 /* STD_INPUT_HANDLE */);
+            try (var arena = Arena.ofConfined()) {
+                return (int) GetConsoleMode.invokeExact(h, arena.allocate(JAVA_INT)) != 0;
+            }
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     static boolean windows() {
         return System.getProperty("os.name").toLowerCase().contains("win");
     }
@@ -65,6 +79,8 @@ public final class LaunchMode {
                 FunctionDescriptor.of(ADDRESS, JAVA_INT));
         GetFileType = lk.downcallHandle(k32.find("GetFileType").orElseThrow(),
                 FunctionDescriptor.of(JAVA_INT, ADDRESS));
+        GetConsoleMode = lk.downcallHandle(k32.find("GetConsoleMode").orElseThrow(),
+                FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
     }
 
     private LaunchMode() {}

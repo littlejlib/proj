@@ -63,8 +63,20 @@ public final class PrpCreator {
         Files.writeString(file, template(settings)
                 .replace("%index%", indexStr)
                 .replace("%name%", name.trim()));
+        ensureProjJson(prpDir);
 
         return new Created(file, indexStr, name.trim());
+    }
+
+    /** A project's first PRP is when it gets a short name; a failure here never stops the PRP. */
+    static void ensureProjJson(Path prpDir) {
+        try {
+            var project = prpDir.toAbsolutePath().normalize().getParent();
+            if (project != null && "prp".equalsIgnoreCase(prpDir.getFileName().toString()))
+                ProjFile.ensure(project);
+        } catch (RuntimeException e) {
+            System.err.println("[PrpCreator] proj.json: " + e.getMessage());
+        }
     }
 
     /**

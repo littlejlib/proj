@@ -373,6 +373,7 @@ public final class SettingsPane {
                 + "status file, and the tail of the last session's log. Each part is included only "
                 + "if that file exists.\n"
                 + "%FLAGS%    the permission flag below, or nothing\n"
+                + "%MODEL%    --model <m> when 'prp agent --model <m>' is given, or nothing\n"
                 + "%PRP%      the PRP path relative to the project, e.g. prp/14-prp-name.md\n"
                 + "%PRP_ABS%  its absolute path\n"
                 + "%PATH%     the project directory");

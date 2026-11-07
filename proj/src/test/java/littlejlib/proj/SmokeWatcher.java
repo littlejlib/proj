@@ -44,6 +44,21 @@ public class SmokeWatcher {
         System.out.println("rows now: " + store.count(root)
                 + "   demo-project stored? " + (store.byPath(proj.toAbsolutePath().toString()) != null));
 
+        System.out.println("\nnested org/project, a build writing target/, an edit of the pom...");
+        var nested = root.resolve("acme").resolve("nested-demo");
+        Files.createDirectories(nested.resolve("src"));
+        Files.writeString(nested.resolve("pom.xml"), POM.replace("watched-demo", "nested-demo"));
+        Thread.sleep(4000);
+        System.out.println("nested stored? " + (store.byPath(nested.toAbsolutePath().toString()) != null));
+        Files.createDirectories(nested.resolve("target").resolve("classes"));
+        Files.writeString(nested.resolve("target").resolve("classes").resolve("A.class"), "x");
+        Files.writeString(nested.resolve("src").resolve("A.java"), "class A {}");
+        Thread.sleep(3000);
+        System.out.println("(no EVENT line should be above this for target/ or src/)");
+        Files.writeString(nested.resolve("pom.xml"),
+                POM.replace("watched-demo", "nested-demo").replace("created while", "edited while"));
+        Thread.sleep(4000);
+
         System.out.println("\ndeleting it while watching...");
         deleteTree(proj);
         Thread.sleep(4000);
