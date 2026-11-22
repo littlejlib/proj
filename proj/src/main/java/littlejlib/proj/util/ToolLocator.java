@@ -11,8 +11,8 @@ import java.util.List;
  * <p>
  * PATH first, then the usual install locations, then - and this is the part that was missing - the
  * SIBLINGS of directories already on PATH. Tools installed outside the standard locations are
- * usually installed together: this machine keeps its command-line tools in {@code C:/user/Apps/cmdtools},
- * which is on PATH, and Tabby in {@code C:/user/Apps/tabby}, which is not on PATH, not under Program
+ * usually installed together: this machine keeps its command-line tools in {@code C:/Tools/bin},
+ * which is on PATH, and Tabby in {@code C:/Tools/tabby}, which is not on PATH, not under Program
  * Files and not under LOCALAPPDATA/Programs. Nothing in the old search would ever have found it, and
  * the user would have been told their terminal was not installed while it ran in front of them.
  * <p>

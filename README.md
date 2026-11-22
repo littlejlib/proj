@@ -62,3 +62,7 @@ The launchers (`proj.exe`, `proj-macos-arm64`, `proj-macos-x86_64`) are [jr](htt
 ## Credit
 
 The PRP convention follows work by Cole Medin: see his video [Project Requirement Prompts](https://www.youtube.com/watch?v=Mk87sFlUG28). This is an independent implementation that differs from his in places, and he neither endorses nor is responsible for it.
+
+## Licence
+
+Apache License 2.0, see [LICENSE](LICENSE).

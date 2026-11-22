@@ -15,7 +15,7 @@ import java.nio.file.Path;
 public class SmokeScanStore {
 
     public static void main(String[] args) {
-        var codeDir = Path.of(args.length > 0 ? args[0] : "C:\\user\\code\\littlejlib");
+        var codeDir = Path.of(args.length > 0 ? args[0] : "C:\\Users\\Demo\\code\\acme");
         System.out.println("scanning " + codeDir);
 
         var scanner = new ProjectTreeScanner(4)

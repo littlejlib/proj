@@ -17,7 +17,7 @@ A PRP file begins with a block of lines between two `---` marks, its front matte
 
 That line is for the coding agent (or for you). It means: run `proj prp guide`, a command of this tool that prints the current rules for working on a PRP: how PRPs are numbered and named, which files belong to one PRP, how to record progress with `proj prp note`, how to keep a project's work items with `proj prp plan`, and what to do when the work ends. The rules come from the tool, not from the PRP file, so they are the same in every project and change in one place. If `proj` is not found on your machine, install it below, open a new terminal and run `proj prp guide`.
 
-The other lines of the front matter name the PRP: `prp_number` and `prp_number_b34str` (its number, counted 0001 to 000Z and on), `prp_name`, `prp_short_name` and `prp_3_letter_name` (what a terminal tab and a ticket like `billing-7` are called), and `prp_uuid`, which stays the same if the file is renamed. proj writes this block itself; the requirement under it is yours.
+The other lines of the front matter name the PRP: `prp_number` and `prp_number_b34str` (its number, counted 0001 to 000Z and on), `prp_name`, `prp_short_name` and `prp_3_letter_name` (what a terminal tab and a ticket like `billing-7` are called), and `prp_uuid`, which stays the same if the file is renamed. Three more keys follow: `prp_status` (new, in_progress, in_review, on_hold, blocked, closed or cancelled), `created_utc` and `last_worked_on_utc`. A PRP is closed by setting its `prp_status`, never by renaming the file. proj writes this block itself; the requirement under it is yours.
 
 ## Download and install
 

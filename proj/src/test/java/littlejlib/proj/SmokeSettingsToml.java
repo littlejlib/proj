@@ -21,7 +21,7 @@ public class SmokeSettingsToml {
         var s = new Settings();
         s.setProjectScanningDepth(5);
         s.setWorkspaceRefreshMinutes(90);
-        s.setSingleFileEditor("C:\\user\\Apps\\VScode\\code.exe");
+        s.setSingleFileEditor("C:\\Tools\\VScode\\code.exe");
         s.setDefaultTerminal("Tabby");
         // Deliberately not one of AgentLauncher.LEGACY_AGENT_COMMANDS: those are fossils and the
         // codec MIGRATES them on write, so using one here tests the migration, not the round trip.
@@ -32,16 +32,16 @@ public class SmokeSettingsToml {
                 "extend:git@example.invalid:acme/prompts.git#main:prp/team.md"));
 
         s.setCodeRepoBases(List.of(
-                new CodeRepoBase("C:\\user\\code", CodeRepoBaseType.PRIMARY),
-                new CodeRepoBase("C:\\user\\github-mirror", CodeRepoBaseType.GITHUB_MIRROR),
+                new CodeRepoBase("C:\\Users\\Demo\\code", CodeRepoBaseType.PRIMARY),
+                new CodeRepoBase("C:\\Users\\Demo\\github-mirror", CodeRepoBaseType.GITHUB_MIRROR),
                 new CodeRepoBase("D:\\archive\\old code", CodeRepoBaseType.AUXILIARY)));
 
         s.setIdeLaunchers(List.of(
-                new IdeLauncher("NetBeans", "C:\\user\\Apps\\netbeans\\bin\\netbeans64.exe \"--open\" \"%PATH%\""),
-                new IdeLauncher("VS Code", "\"C:\\user\\Apps\\VScode\\code.exe\" \"%PATH%\"")));
+                new IdeLauncher("NetBeans", "C:\\Tools\\netbeans\\bin\\netbeans64.exe \"--open\" \"%PATH%\""),
+                new IdeLauncher("VS Code", "\"C:\\Tools\\VScode\\code.exe\" \"%PATH%\"")));
 
         s.setTerminalLaunchers(List.of(
-                new TerminalLauncher("Tabby", "\"C:\\user\\Apps\\tabby\\Tabby.exe\" open \"%PATH%\"", ""),
+                new TerminalLauncher("Tabby", "\"C:\\Tools\\tabby\\Tabby.exe\" open \"%PATH%\"", ""),
                 // The single quotes here are the interesting part: a literal TOML string cannot
                 // contain one, so this must come back through the '''...''' form intact.
                 new TerminalLauncher("PowerShell",
@@ -84,8 +84,8 @@ public class SmokeSettingsToml {
             eq("base type " + i, s.getCodeRepoBases().get(i).getType(), back.getCodeRepoBases().get(i).getType());
         }
         // Derived, not stored: the file can no longer disagree with itself about where code lives.
-        eq("derived codeReposPath", "C:\\user\\code", back.getCodeReposPath());
-        eq("derived gitHubMirrorPath", "C:\\user\\github-mirror", back.getGitHubMirrorPath());
+        eq("derived codeReposPath", "C:\\Users\\Demo\\code", back.getCodeReposPath());
+        eq("derived gitHubMirrorPath", "C:\\Users\\Demo\\github-mirror", back.getGitHubMirrorPath());
 
         eq("ides", s.getIdeLaunchers().size(), back.getIdeLaunchers().size());
         for (var i = 0; i < s.getIdeLaunchers().size(); i++) {
