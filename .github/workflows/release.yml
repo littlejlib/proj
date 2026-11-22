@@ -23,7 +23,7 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: build the release exe and jar (url source: its jar comes from the release)
+      - name: build the release exe and jar (its jar is fetched from the release)
         shell: bash
         run: mvn -B -ntp -DskipTests -Djrexe -Djr.source=url package
       - name: build an exe that runs the jar just built, for the install test
