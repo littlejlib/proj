@@ -55,6 +55,7 @@
             <exclusions>
                 <exclusion><groupId>org.graalvm.polyglot</groupId><artifactId>js</artifactId></exclusion>
                 <exclusion><groupId>org.graalvm.polyglot</groupId><artifactId>polyglot</artifactId></exclusion>
+                <exclusion><groupId>org.graalvm.sdk</groupId><artifactId>graal-sdk</artifactId></exclusion>
                 <exclusion><groupId>org.apache.lucene</groupId><artifactId>lucene-analysis-common</artifactId></exclusion>
                 <exclusion><groupId>org.apache.lucene</groupId><artifactId>lucene-queryparser</artifactId></exclusion>
                 <exclusion><groupId>org.apache.lucene</groupId><artifactId>lucene-spatial-extras</artifactId></exclusion>
