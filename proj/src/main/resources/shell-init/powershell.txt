@@ -1,0 +1,19 @@
+# proj -- PowerShell adapter
+#
+# Install: proj --init powershell >> $PROFILE
+# then open a new PowerShell session (or: . $PROFILE)
+#
+# Only the navigating forms are captured. Query commands answer on stdout so they can be
+# piped (proj files --paths | rg ...), and capturing one of those would swallow its output
+# and then cd to the last line of it -- so they are passed straight through.
+#
+# proj.exe writes the resolved path to stdout and everything human-facing to stderr, so the
+# picker still renders while the path is captured. Cancelling emits nothing, leaving $p
+# empty and skipping the Set-Location.
+function proj {
+    $nav = ($args.Count -eq 0) -or (($args.Count -eq 1) -and ($args[0] -in 'o', 'open'))
+    if (-not $nav) { & proj.exe @args; return }
+
+    $p = & proj.exe --print-cd @args
+    if ($LASTEXITCODE -eq 0 -and $p) { Set-Location -LiteralPath ($p | Select-Object -Last 1) }
+}

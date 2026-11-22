@@ -1,0 +1,25 @@
+# proj -- bash/zsh adapter (also the macOS path, replacing proj-shell-function.sh)
+#
+# Install: proj --init bash >> ~/.bashrc      (or ~/.zshrc)
+# then open a new shell (or: source ~/.bashrc)
+#
+# It must be a function, not a script: a script runs in a child process and a child can
+# never change its parent's working directory.
+#
+# Only the navigating forms are captured. Query commands answer on stdout so they can be
+# piped (proj files --paths | rg ...), and capturing one of those would swallow its output
+# and then cd to the last line of it -- so they are passed straight through.
+#
+# proj writes the resolved path to stdout and everything human-facing to stderr, so the
+# picker still renders while the path is captured. Cancelling emits nothing, leaving $p
+# empty so no cd happens.
+proj() {
+    case "$#:$1" in
+        0:|1:o|1:open) ;;
+        *) command {TOOL} "$@"; return $? ;;
+    esac
+
+    local p
+    p=$(command {TOOL} --print-cd "$@") || return $?
+    [ -n "$p" ] && cd -- "$p"
+}

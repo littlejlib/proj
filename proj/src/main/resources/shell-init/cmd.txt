@@ -1,0 +1,22 @@
+@echo off
+REM proj -- cmd.exe adapter (no Clink required)
+REM
+REM Install: proj --init cmd > "%USERPROFILE%\projinit.bat"
+REM then either run it per session, or point AutoRun at it:
+REM   reg add "HKCU\Software\Microsoft\Command Processor" /v AutoRun /d "%USERPROFILE%\projinit.bat" /f
+REM
+REM If you already run Clink (it is on AutoRun here), prefer `proj --init clink`:
+REM same mechanism, but no doskey quoting and no AutoRun edit.
+REM
+REM stdout of proj.exe is the resolved path and nothing else; the picker UI is on
+REM stderr, so it still renders while for /f captures the answer. Cancelling prints
+REM nothing, so for /f iterates zero times and no cd happens.
+REM IMPORTANT -- prefer `proj --init clink` if you can. A doskey macro cannot inspect its
+REM own arguments, so this alias wraps EVERY proj invocation, including the query commands
+REM that answer on stdout to be piped (proj files --paths). Wrapping one of those captures
+REM its output and cds to the last line. The Clink adapter whitelists only the navigating
+REM forms (bare proj, proj o, proj open) and passes everything else straight through.
+REM
+REM So this alias is deliberately named projcd, not proj: use `projcd` to navigate and
+REM plain `proj` for everything else.
+doskey projcd=for /f "usebackq delims=" %i in (`proj.exe --print-cd $*`) do @cd /d "%i"
