@@ -1,0 +1,77 @@
+# Builds proj.exe as a GraalVM native image (one exe, no JVM, no jar) on a clean Windows runner from public repositories
+# alone, tests it on a profile nothing has installed into, and leaves the exe as an artifact. It publishes nothing and
+# needs no secrets; it is separate from release.yml, which still builds the jr launchers.
+name: native
+
+on:
+  push:
+    branches: ['native-**']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: proj
+    steps:
+      - uses: actions/checkout@v5
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: graalvm
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: maven
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: build the native exe
+        shell: cmd
+        run: mvn -B -ntp -Pnative -DskipTests package
+      - name: the exe carries its icon and version
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path target/proj.exe).Path
+          $v = (Get-Item $exe).VersionInfo
+          "FileDescription=$($v.FileDescription) FileVersion=$($v.FileVersion)"
+          if ($v.FileDescription -ne 'proj') { throw 'version resource missing' }
+          Add-Type -AssemblyName System.Drawing
+          $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe)
+          if ($null -eq $icon -or $icon.Width -lt 16) { throw 'icon missing' }
+          "icon ok: $($icon.Width)x$($icon.Height)"
+      - name: run it on a scratch profile
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path target/proj.exe).Path
+          $home2 = Join-Path $env:RUNNER_TEMP 'home'
+          New-Item -ItemType Directory -Force "$home2\littlejlib\proj", "$env:RUNNER_TEMP\code\acme\billing" | Out-Null
+          Set-Content "$env:RUNNER_TEMP\code\acme\billing\pom.xml" '<project><modelVersion>4.0.0</modelVersion><groupId>io.github.acme</groupId><artifactId>acme-billing</artifactId><version>1.0</version></project>'
+          $code = ($env:RUNNER_TEMP -replace '\\','/') + '/code'
+          Set-Content "$home2\littlejlib\proj\Settings.toml" "codebase.primary = ['$code']`ncodebase.mirror = []`nglobalHotkey = 'off'"
+          $h = "-Duser.home=$home2"
+          & $exe $h scan; if ($LASTEXITCODE) { throw 'scan' }
+          & $exe $h list | Select-String 'acme-billing' | Out-Null; if ($LASTEXITCODE) { throw 'list' }
+          & $exe $h prp guide | Select-String 'PRP conventions' | Out-Null; if ($LASTEXITCODE) { throw 'prp guide' }
+          & $exe $h config get scanDepth; if ($LASTEXITCODE) { throw 'config' }
+          & $exe $h daemon start; if ($LASTEXITCODE) { throw 'daemon start' }
+          & $exe $h daemon status; if ($LASTEXITCODE) { throw 'daemon status' }
+          & $exe $h list | Select-String 'acme-billing' | Out-Null; if ($LASTEXITCODE) { throw 'list via daemon' }
+          & $exe $h daemon stop; if ($LASTEXITCODE) { throw 'daemon stop' }
+      - name: install on a fresh profile
+        # A profile nothing has installed into has no %LOCALAPPDATA%\Programs. The runner is throwaway,
+        # so this is a real install: default folder, user PATH.
+        shell: cmd
+        run: |
+          if exist "%LOCALAPPDATA%\Programs" rmdir /s /q "%LOCALAPPDATA%\Programs"
+          call "%GITHUB_WORKSPACE%\proj\target\proj.exe" install < nul || exit /b 1
+          "%LOCALAPPDATA%\Programs\proj\proj.exe" prp guide || exit /b 1
+          "%LOCALAPPDATA%\Programs\proj\proj.exe" uninstall < nul || exit /b 1
+      - name: checksum
+        shell: bash
+        run: |
+          cp target/proj.exe ../proj.exe
+          (cd .. && sha256sum proj.exe > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-artifact@v5
+        with:
+          name: proj-native-windows
+          path: |
+            proj.exe
+            SHA256SUMS

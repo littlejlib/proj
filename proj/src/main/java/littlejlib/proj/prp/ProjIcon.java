@@ -95,11 +95,12 @@ public final class ProjIcon {
             var reply = client.send(HttpRequest.newBuilder(URI.create(url)).timeout(TIMEOUT).build(),
                     HttpResponse.BodyHandlers.ofByteArray());
             if (reply.statusCode() != 200 || reply.body().length > (4 << 20)) return false;
-            var image = ImageIO.read(new java.io.ByteArrayInputStream(reply.body()));
-            if (image == null) return false;
             Files.createDirectories(to.getParent());
-            ImageIO.write(square(image), "png", to.toFile());
-            return true;
+            if (isPng(reply.body())) {
+                Files.write(to, reply.body());
+                return true;
+            }
+            return reencode(reply.body(), to);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
@@ -107,6 +108,18 @@ public final class ProjIcon {
             System.err.println("[ProjIcon] " + e.getClass().getSimpleName() + ": " + url);
             return false;
         }
+    }
+
+    static boolean isPng(byte[] b) {
+        return b.length > 8 && b[0] == (byte) 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G';
+    }
+
+    /** Any other image format, scaled to a SIZE square with AWT; the native exe has no AWT and skips these. */
+    static boolean reencode(byte[] body, Path to) throws IOException {
+        var image = ImageIO.read(new java.io.ByteArrayInputStream(body));
+        if (image == null) return false;
+        ImageIO.write(square(image), "png", to.toFile());
+        return true;
     }
 
     /** Fitted into a SIZE square, centred, never stretched. */

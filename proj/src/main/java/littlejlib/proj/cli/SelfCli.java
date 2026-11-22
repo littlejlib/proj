@@ -5,6 +5,8 @@ import jarrunner.jr.apputils.JrApp;
 import jarrunner.jr.apputils.UpdateResult;
 import jarrunner.jr.apputils.Updater;
 import littlejlib.proj.daemon.Client;
+import littlejlib.proj.self.NativeUpdate;
+import littlejlib.proj.util.Native;
 import picocli.CommandLine.Command;
 
 /// `proj install`, `proj update`, `proj uninstall`: the downloaded exe puts itself in place and keeps itself
@@ -34,6 +36,11 @@ public final class SelfCli {
     @Command(name = "update", description = "Update this proj to the newest release")
     public static class UpdateCmd implements Runnable {
         @Override public void run() {
+            if (Native.image()) {
+                var code = NativeUpdate.run(false, SelfCli::stopDaemon);
+                if (code != 0) System.exit(code);
+                return;
+            }
             var check = Updater.check();
             if (check.status() == UpdateResult.Status.NEWER) stopDaemon();
             var r = check.status() == UpdateResult.Status.NEWER ? Updater.update() : check;

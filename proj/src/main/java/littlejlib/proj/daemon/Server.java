@@ -55,6 +55,7 @@ public class Server {
 
     public void run() throws Exception {
         System.setProperty("java.awt.headless", "false");
+        littlejlib.proj.util.Native.leaveConsole();
 
         serverSocket = new ServerSocket(0, 16, InetAddress.getLoopbackAddress());
         var info = new Info(serverSocket.getLocalPort(), ProcessHandle.current().pid(), Build.STAMP);

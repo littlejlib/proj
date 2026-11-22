@@ -1,6 +1,6 @@
 package littlejlib.proj.daemon;
 
-import littlejlib.proj.ui.AppIconArt;
+import littlejlib.proj.ui.AppIcon;
 
 import java.awt.*;
 
@@ -11,9 +11,8 @@ import java.awt.*;
  * showFromSystemTray, so it only existed while the window was hidden - which is exactly backwards
  * for a process whose whole point is being permanently available.
  * <p>
- * The mark itself is {@link AppIconArt}, shared with every window, and drawn at the size the tray
- * actually asks for: a 16px image stretched to the 24px of a 150% display is the blurred version of
- * the same icon.
+ * The mark itself is {@link AppIcon}, shared with every window, at the size the tray actually asks
+ * for: a 16px image stretched to the 24px of a 150% display is the blurred version of the same icon.
  */
 public class TrayUi {
 
@@ -60,8 +59,10 @@ public class TrayUi {
         if (tray != null && icon != null) tray.remove(icon);
     }
 
-    Image image() {
+    Image image() throws java.io.IOException {
         var asked = tray.getTrayIconSize();
-        return AppIconArt.draw(Math.max(16, asked == null ? 16 : asked.width), AppIconArt.PROJECTS);
+        try (var in = AppIcon.stream(AppIcon.PROJECTS, Math.max(16, asked == null ? 16 : asked.width))) {
+            return javax.imageio.ImageIO.read(in);
+        }
     }
 }

@@ -114,6 +114,7 @@ public class Main implements Runnable {
         // is left carrying only the resolved path, which is what lets a shell adapter
         // wrap this process in `for /f` and read a clean answer.
         StdoutChannel.protect();
+        littlejlib.proj.self.NativeApp.init();
         // Replaces the `chcp 65001` that proj.bat used to do; a batch wrapper is no
         // longer in the picture to do it for us.
         enableUnicodeConsole();
@@ -487,33 +488,13 @@ public class Main implements Runnable {
             }
         }
 
-        // Fallback to java.awt.Desktop
-        try {
-            if (java.awt.Desktop.isDesktopSupported()) {
-                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                if (desktop.isSupported(java.awt.Desktop.Action.EDIT)) {
-                    desktop.edit(file);
-                    System.out.println("Opening file with system default editor...");
-                    System.out.flush();
-                } else if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
-                    desktop.open(file);
-                    System.out.println("Opening file with system default application...");
-                    System.out.flush();
-                } else {
-                    System.out.println("ERROR: No way to open file - Desktop API not supported.");
-                    System.out.println("File location: " + file.getAbsolutePath());
-                    System.out.flush();
-                }
-            } else {
-                System.out.println("ERROR: Desktop API not supported on this system.");
-                System.out.println("File location: " + file.getAbsolutePath());
-                System.out.flush();
-            }
-        } catch (Exception e) {
-            System.out.println("ERROR: Failed to open file: " + e.getMessage());
+        if (littlejlib.proj.util.OpenFile.open(file.toPath())) {
+            System.out.println("Opening file with system default application...");
+        } else {
+            System.out.println("ERROR: Failed to open file.");
             System.out.println("File location: " + file.getAbsolutePath());
-            System.out.flush();
         }
+        System.out.flush();
     }
 
     private static void manageOrganizations() {

@@ -17,6 +17,10 @@ public final class Build {
 
     static String compute() {
         try {
+            if (littlejlib.proj.util.Native.image()) {
+                var exe = littlejlib.proj.util.Native.exe().toFile();
+                return "exe:" + exe.length() + ":" + exe.lastModified();
+            }
             var location = Build.class.getProtectionDomain().getCodeSource().getLocation();
             var file = new File(location.toURI());
             return file.isFile()

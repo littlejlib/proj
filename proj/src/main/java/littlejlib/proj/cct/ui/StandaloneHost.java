@@ -2,8 +2,6 @@ package littlejlib.proj.cct.ui;
 
 import module java.base;
 
-import java.awt.Desktop;
-
 import littlejlib.proj.cct.SettingsStore;
 
 /**
@@ -18,12 +16,7 @@ public final class StandaloneHost implements CctHost {
         var path = file.toAbsolutePath().toString();
         if (launch("code.exe", path)) return;
         if (launch("code", path)) return;
-        try {
-            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.EDIT))
-                Desktop.getDesktop().edit(file.toFile());
-        } catch (Exception ignored) {
-            // there is nothing further to try, and the caller already says so on screen
-        }
+        littlejlib.proj.util.OpenFile.open(file);
     }
 
     @Override

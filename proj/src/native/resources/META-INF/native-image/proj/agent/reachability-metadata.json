@@ -1,0 +1,2767 @@
+{
+  "reflection": [
+    {
+      "type": "boolean[]"
+    },
+    {
+      "type": "byte[]"
+    },
+    {
+      "type": "ch.qos.logback.classic.Logger"
+    },
+    {
+      "type": "char[]"
+    },
+    {
+      "type": "com.arcadedb.graphql.query.GraphQLQueryEngineFactory"
+    },
+    {
+      "type": "com.arcadedb.gremlin.query.GremlinQueryEngineFactory"
+    },
+    {
+      "type": "com.arcadedb.mongo.query.MongoQueryEngineFactory"
+    },
+    {
+      "type": "com.arcadedb.query.opencypher.query.OpenCypherQueryEngineFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.arcadedb.redis.query.RedisQueryEngineFactory"
+    },
+    {
+      "type": "com.arcadedb.server.backup.AutoBackupSchedulerPlugin"
+    },
+    {
+      "type": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.google.gson.internal.bind.JavaTimeTypeAdapters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.AESCipher$General",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ARCFOURCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESedeCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DHParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.PBKDF2Core$HmacSHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.TlsMasterSecretGenerator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.management.GarbageCollectorMXBean"
+    },
+    {
+      "type": "com.sun.management.GcInfo"
+    },
+    {
+      "type": "com.sun.management.HotSpotDiagnosticMXBean"
+    },
+    {
+      "type": "com.sun.management.OperatingSystemMXBean"
+    },
+    {
+      "type": "com.sun.management.ThreadMXBean"
+    },
+    {
+      "type": "com.sun.management.VMOption"
+    },
+    {
+      "type": "com.sun.management.internal.DiagnosticCommandArgumentInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "boolean",
+            "boolean",
+            "boolean",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.management.internal.DiagnosticCommandArgumentInfo[]"
+    },
+    {
+      "type": "com.sun.management.internal.DiagnosticCommandInfo",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "boolean",
+            "java.util.List"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.management.internal.DiagnosticCommandInfo[]"
+    },
+    {
+      "type": "com.sun.management.internal.GarbageCollectorExtImpl"
+    },
+    {
+      "type": "com.sun.management.internal.HotSpotAOTCacheImpl"
+    },
+    {
+      "type": "com.sun.management.internal.HotSpotDiagnostic"
+    },
+    {
+      "type": "com.sun.management.internal.HotSpotThreadImpl"
+    },
+    {
+      "type": "com.sun.management.internal.OperatingSystemImpl"
+    },
+    {
+      "type": "com.sun.management.internal.VirtualThreadSchedulerImpls$VirtualThreadSchedulerImpl"
+    },
+    {
+      "type": "double[]"
+    },
+    {
+      "type": "float[]"
+    },
+    {
+      "type": "groovy.lang.Closure"
+    },
+    {
+      "type": "int[]"
+    },
+    {
+      "type": "io.undertow.UndertowLogger_$logger",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.jboss.logging.Logger"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.undertow.UndertowLogger_$logger_en"
+    },
+    {
+      "type": "io.undertow.UndertowLogger_$logger_en_US"
+    },
+    {
+      "type": "io.undertow.server.ConnectorStatisticsImpl"
+    },
+    {
+      "type": "io.undertow.server.DefaultByteBufferPool"
+    },
+    {
+      "type": "io.undertow.server.DefaultByteBufferPool$DefaultPooledBuffer"
+    },
+    {
+      "type": "io.undertow.util.Headers",
+      "fields": [
+        {
+          "name": "ACCEPT"
+        },
+        {
+          "name": "ACCEPT_CHARSET"
+        },
+        {
+          "name": "ACCEPT_ENCODING"
+        },
+        {
+          "name": "ACCEPT_LANGUAGE"
+        },
+        {
+          "name": "ACCEPT_RANGES"
+        },
+        {
+          "name": "AGE"
+        },
+        {
+          "name": "ALGORITHM"
+        },
+        {
+          "name": "ALLOW"
+        },
+        {
+          "name": "AUTHENTICATION_INFO"
+        },
+        {
+          "name": "AUTHORIZATION"
+        },
+        {
+          "name": "AUTH_PARAM"
+        },
+        {
+          "name": "BASIC"
+        },
+        {
+          "name": "CACHE_CONTROL"
+        },
+        {
+          "name": "CHUNKED"
+        },
+        {
+          "name": "CLOSE"
+        },
+        {
+          "name": "CNONCE"
+        },
+        {
+          "name": "COMPRESS"
+        },
+        {
+          "name": "CONNECTION"
+        },
+        {
+          "name": "CONTENT_DISPOSITION"
+        },
+        {
+          "name": "CONTENT_ENCODING"
+        },
+        {
+          "name": "CONTENT_LANGUAGE"
+        },
+        {
+          "name": "CONTENT_LENGTH"
+        },
+        {
+          "name": "CONTENT_LOCATION"
+        },
+        {
+          "name": "CONTENT_MD5"
+        },
+        {
+          "name": "CONTENT_RANGE"
+        },
+        {
+          "name": "CONTENT_SECURITY_POLICY"
+        },
+        {
+          "name": "CONTENT_TRANSFER_ENCODING"
+        },
+        {
+          "name": "CONTENT_TYPE"
+        },
+        {
+          "name": "COOKIE"
+        },
+        {
+          "name": "COOKIE2"
+        },
+        {
+          "name": "DATE"
+        },
+        {
+          "name": "DEFLATE"
+        },
+        {
+          "name": "DIGEST"
+        },
+        {
+          "name": "DOMAIN"
+        },
+        {
+          "name": "ETAG"
+        },
+        {
+          "name": "EXPECT"
+        },
+        {
+          "name": "EXPIRES"
+        },
+        {
+          "name": "FORWARDED"
+        },
+        {
+          "name": "FROM"
+        },
+        {
+          "name": "GZIP"
+        },
+        {
+          "name": "HOST"
+        },
+        {
+          "name": "IDENTITY"
+        },
+        {
+          "name": "IF_MATCH"
+        },
+        {
+          "name": "IF_MODIFIED_SINCE"
+        },
+        {
+          "name": "IF_NONE_MATCH"
+        },
+        {
+          "name": "IF_RANGE"
+        },
+        {
+          "name": "IF_UNMODIFIED_SINCE"
+        },
+        {
+          "name": "KEEP_ALIVE"
+        },
+        {
+          "name": "LAST_MODIFIED"
+        },
+        {
+          "name": "LOCATION"
+        },
+        {
+          "name": "MAX_FORWARDS"
+        },
+        {
+          "name": "NEGOTIATE"
+        },
+        {
+          "name": "NEXT_NONCE"
+        },
+        {
+          "name": "NONCE"
+        },
+        {
+          "name": "NONCE_COUNT"
+        },
+        {
+          "name": "OPAQUE"
+        },
+        {
+          "name": "ORIGIN"
+        },
+        {
+          "name": "PRAGMA"
+        },
+        {
+          "name": "PROXY_AUTHENTICATE"
+        },
+        {
+          "name": "PROXY_AUTHORIZATION"
+        },
+        {
+          "name": "QOP"
+        },
+        {
+          "name": "RANGE"
+        },
+        {
+          "name": "REALM"
+        },
+        {
+          "name": "REFERER"
+        },
+        {
+          "name": "REFERRER_POLICY"
+        },
+        {
+          "name": "REFRESH"
+        },
+        {
+          "name": "RESPONSE"
+        },
+        {
+          "name": "RESPONSE_AUTH"
+        },
+        {
+          "name": "RETRY_AFTER"
+        },
+        {
+          "name": "SECURE_PROTOCOL"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_ACCEPT"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_EXTENSIONS"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_KEY"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_KEY1"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_KEY2"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_LOCATION"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_ORIGIN"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_PROTOCOL"
+        },
+        {
+          "name": "SEC_WEB_SOCKET_VERSION"
+        },
+        {
+          "name": "SERVER"
+        },
+        {
+          "name": "SERVLET_ENGINE"
+        },
+        {
+          "name": "SET_COOKIE"
+        },
+        {
+          "name": "SET_COOKIE2"
+        },
+        {
+          "name": "SSL_CIPHER"
+        },
+        {
+          "name": "SSL_CIPHER_USEKEYSIZE"
+        },
+        {
+          "name": "SSL_CLIENT_CERT"
+        },
+        {
+          "name": "SSL_SESSION_ID"
+        },
+        {
+          "name": "STALE"
+        },
+        {
+          "name": "STATUS"
+        },
+        {
+          "name": "STRICT_TRANSPORT_SECURITY"
+        },
+        {
+          "name": "TE"
+        },
+        {
+          "name": "TRAILER"
+        },
+        {
+          "name": "TRANSFER_ENCODING"
+        },
+        {
+          "name": "UPGRADE"
+        },
+        {
+          "name": "URI"
+        },
+        {
+          "name": "USERNAME"
+        },
+        {
+          "name": "USER_AGENT"
+        },
+        {
+          "name": "VARY"
+        },
+        {
+          "name": "VIA"
+        },
+        {
+          "name": "WARNING"
+        },
+        {
+          "name": "WWW_AUTHENTICATE"
+        },
+        {
+          "name": "X_COMPRESS"
+        },
+        {
+          "name": "X_CONTENT_LENGTH"
+        },
+        {
+          "name": "X_CONTENT_TYPE_OPTIONS"
+        },
+        {
+          "name": "X_DISABLE_PUSH"
+        },
+        {
+          "name": "X_FORWARDED_FOR"
+        },
+        {
+          "name": "X_FORWARDED_HOST"
+        },
+        {
+          "name": "X_FORWARDED_PORT"
+        },
+        {
+          "name": "X_FORWARDED_PROTO"
+        },
+        {
+          "name": "X_FORWARDED_SERVER"
+        },
+        {
+          "name": "X_FRAME_OPTIONS"
+        },
+        {
+          "name": "X_GZIP"
+        },
+        {
+          "name": "X_XSS_PROTECTION"
+        }
+      ]
+    },
+    {
+      "type": "io.undertow.util.HttpString"
+    },
+    {
+      "type": "java.lang.Boolean",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Byte",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Character",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Class",
+      "methods": [
+        {
+          "name": "isRecord",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Deprecated"
+    },
+    {
+      "type": "java.lang.Double",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Float",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Integer",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Long",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Object"
+    },
+    {
+      "type": "java.lang.Short",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.StackTraceElement"
+    },
+    {
+      "type": "java.lang.String"
+    },
+    {
+      "type": "java.lang.String[]"
+    },
+    {
+      "type": "java.lang.System",
+      "methods": [
+        {
+          "name": "console",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Thread",
+      "fields": [
+        {
+          "name": "contextClassLoader"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Void",
+      "fields": [
+        {
+          "name": "TYPE"
+        }
+      ]
+    },
+    {
+      "type": "java.lang.management.BufferPoolMXBean"
+    },
+    {
+      "type": "java.lang.management.ClassLoadingMXBean"
+    },
+    {
+      "type": "java.lang.management.CompilationMXBean"
+    },
+    {
+      "type": "java.lang.management.LockInfo"
+    },
+    {
+      "type": "java.lang.management.MemoryMXBean"
+    },
+    {
+      "type": "java.lang.management.MemoryManagerMXBean"
+    },
+    {
+      "type": "java.lang.management.MemoryPoolMXBean"
+    },
+    {
+      "type": "java.lang.management.MemoryUsage"
+    },
+    {
+      "type": "java.lang.management.MonitorInfo"
+    },
+    {
+      "type": "java.lang.management.PlatformLoggingMXBean"
+    },
+    {
+      "type": "java.lang.management.RuntimeMXBean"
+    },
+    {
+      "type": "java.lang.management.ThreadInfo"
+    },
+    {
+      "type": "java.lang.reflect.RecordComponent"
+    },
+    {
+      "type": "java.math.BigDecimal"
+    },
+    {
+      "type": "java.math.BigInteger"
+    },
+    {
+      "type": "java.nio.channels.spi.AbstractInterruptibleChannel"
+    },
+    {
+      "type": "java.nio.file.Path"
+    },
+    {
+      "type": "java.nio.file.Paths"
+    },
+    {
+      "type": "java.security.AlgorithmParametersSpi"
+    },
+    {
+      "type": "java.security.KeyStoreSpi"
+    },
+    {
+      "type": "java.sql.Connection"
+    },
+    {
+      "type": "java.sql.Date"
+    },
+    {
+      "type": "java.sql.Driver"
+    },
+    {
+      "type": "java.sql.DriverManager"
+    },
+    {
+      "type": "java.sql.Time"
+    },
+    {
+      "type": "java.sql.Timestamp"
+    },
+    {
+      "type": "java.time.Duration"
+    },
+    {
+      "type": "java.time.Instant"
+    },
+    {
+      "type": "java.time.LocalDate"
+    },
+    {
+      "type": "java.time.LocalDateTime"
+    },
+    {
+      "type": "java.time.LocalTime"
+    },
+    {
+      "type": "java.time.MonthDay"
+    },
+    {
+      "type": "java.time.OffsetDateTime"
+    },
+    {
+      "type": "java.time.OffsetTime"
+    },
+    {
+      "type": "java.time.Period"
+    },
+    {
+      "type": "java.time.Year"
+    },
+    {
+      "type": "java.time.YearMonth"
+    },
+    {
+      "type": "java.time.ZoneId"
+    },
+    {
+      "type": "java.time.ZoneOffset"
+    },
+    {
+      "type": "java.time.ZonedDateTime"
+    },
+    {
+      "type": "java.util.ArrayList"
+    },
+    {
+      "type": "java.util.Arrays",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "asList",
+          "parameterTypes": [
+            "java.lang.Object[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.util.Date"
+    },
+    {
+      "type": "java.util.ImmutableCollections$ListN"
+    },
+    {
+      "type": "java.util.LinkedHashMap"
+    },
+    {
+      "type": "javax.management.MBeanOperationInfo"
+    },
+    {
+      "type": "javax.management.MBeanServerBuilder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "javax.management.ObjectName"
+    },
+    {
+      "type": "javax.management.ObjectName[]"
+    },
+    {
+      "type": "javax.management.StandardEmitterMBean"
+    },
+    {
+      "type": "javax.management.openmbean.CompositeData"
+    },
+    {
+      "type": "javax.management.openmbean.CompositeData[]"
+    },
+    {
+      "type": "javax.management.openmbean.OpenMBeanOperationInfoSupport"
+    },
+    {
+      "type": "javax.management.openmbean.TabularData"
+    },
+    {
+      "type": "jdk.management.HotSpotAOTCacheMXBean"
+    },
+    {
+      "type": "jdk.management.VirtualThreadSchedulerMXBean"
+    },
+    {
+      "type": "jdk.management.jfr.ConfigurationInfo"
+    },
+    {
+      "type": "jdk.management.jfr.EventTypeInfo"
+    },
+    {
+      "type": "jdk.management.jfr.FlightRecorderMXBean"
+    },
+    {
+      "type": "jdk.management.jfr.FlightRecorderMXBeanImpl"
+    },
+    {
+      "type": "jdk.management.jfr.RecordingInfo"
+    },
+    {
+      "type": "jdk.management.jfr.SettingDescriptorInfo"
+    },
+    {
+      "type": "littlejlib.proj.Main",
+      "fields": [
+        {
+          "name": "verboseOpt"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$BlockedCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$CctCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$CentralCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$ConfigCommand",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$DepsCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$FilesCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$FindCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$GlobalPrpCommand"
+    },
+    {
+      "type": "littlejlib.proj.Main$HelpCommand",
+      "fields": [
+        {
+          "name": "spec"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$IdeCommand"
+    },
+    {
+      "type": "littlejlib.proj.Main$ImpactCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$InfoCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$ListCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$NewCommand"
+    },
+    {
+      "type": "littlejlib.proj.Main$OpenCommand"
+    },
+    {
+      "type": "littlejlib.proj.Main$PrpCommand",
+      "fields": [
+        {
+          "name": "spec"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$QueryBackedCommand"
+    },
+    {
+      "type": "littlejlib.proj.Main$ScanCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$SettingsCommand"
+    },
+    {
+      "type": "littlejlib.proj.Main$TermCommand",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "which"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$WhereCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.Main$WsCommand",
+      "fields": [
+        {
+          "name": "args"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.RepoBaseCommand",
+      "fields": [
+        {
+          "name": "action"
+        },
+        {
+          "name": "path"
+        },
+        {
+          "name": "type"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.BackupCmd"
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.CctCli"
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.ExportCmd"
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.FindCmd",
+      "fields": [
+        {
+          "name": "branch"
+        },
+        {
+          "name": "cwdContains"
+        },
+        {
+          "name": "layer"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "mode"
+        },
+        {
+          "name": "model"
+        },
+        {
+          "name": "noResume"
+        },
+        {
+          "name": "project"
+        },
+        {
+          "name": "words"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.IndexCmd",
+      "fields": [
+        {
+          "name": "force"
+        },
+        {
+          "name": "noAssistant"
+        },
+        {
+          "name": "noThinking"
+        },
+        {
+          "name": "quiet"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.ResumeCmd"
+    },
+    {
+      "type": "littlejlib.proj.cct.cli.ShowCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.AotCommands$AotCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.AotCommands$CreateCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.AotCommands$StatusCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.AotCommands$WarmupCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ClaudeCli",
+      "fields": [
+        {
+          "name": "spec"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.ClaudeCli$Hook"
+    },
+    {
+      "type": "littlejlib.proj.cli.ClaudeCli$Install"
+    },
+    {
+      "type": "littlejlib.proj.cli.ClaudeCli$Status"
+    },
+    {
+      "type": "littlejlib.proj.cli.CloneCommands$CloneCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$AddCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$DropCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$EditCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$GetCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$ListCmd",
+      "fields": [
+        {
+          "name": "json"
+        },
+        {
+          "name": "keysOnly"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$PathCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$SetCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$UnsetCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ConfigCommands$ValidateCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.HibCli",
+      "fields": [
+        {
+          "name": "anyway"
+        },
+        {
+          "name": "dryRun"
+        },
+        {
+          "name": "prp"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.HibLsCmd",
+      "fields": [
+        {
+          "name": "full"
+        },
+        {
+          "name": "json"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.HibParkedCmd",
+      "fields": [
+        {
+          "name": "all"
+        },
+        {
+          "name": "filter"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "was"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.HibRestoreCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.HibSuggestCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.HibTabCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.HibUiCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanAddCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanCheckCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanCli",
+      "fields": [
+        {
+          "name": "spec"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanImportCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanListCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanReportCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanSetCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PlanShowCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$AgentCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$DirCmd",
+      "fields": [
+        {
+          "name": "dir"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$InstructionsCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$ListCmd",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "openOnly"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$LogsCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$NewCmd",
+      "fields": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "alias3"
+        },
+        {
+          "name": "alias4"
+        },
+        {
+          "name": "dir"
+        },
+        {
+          "name": "exe"
+        },
+        {
+          "name": "force"
+        },
+        {
+          "name": "fullName"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "model"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "open"
+        },
+        {
+          "name": "shortName"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$PromptCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpCommands$ShowCmd",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "json"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpFindCmd",
+      "fields": [
+        {
+          "name": "depth"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "maxAge"
+        },
+        {
+          "name": "openOnly"
+        },
+        {
+          "name": "query"
+        },
+        {
+          "name": "rescan"
+        },
+        {
+          "name": "roots"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpGuideCmd",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "refresh"
+        },
+        {
+          "name": "source"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpIndexCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpKeyCmd",
+      "fields": [
+        {
+          "name": "alias3"
+        },
+        {
+          "name": "alias4"
+        },
+        {
+          "name": "dir"
+        },
+        {
+          "name": "icon"
+        },
+        {
+          "name": "key"
+        },
+        {
+          "name": "longName"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpNoteCmd",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "kind"
+        },
+        {
+          "name": "refs"
+        },
+        {
+          "name": "session"
+        },
+        {
+          "name": "text"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpPreCompactCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpRecallCmd",
+      "fields": [
+        {
+          "name": "budget"
+        },
+        {
+          "name": "dir"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "list"
+        },
+        {
+          "name": "session"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpRelateCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpRenumberCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpRenumberSessionsCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpResumeCmd",
+      "fields": [
+        {
+          "name": "continueParked"
+        },
+        {
+          "name": "dir"
+        },
+        {
+          "name": "dryRun"
+        },
+        {
+          "name": "exe"
+        },
+        {
+          "name": "fork"
+        },
+        {
+          "name": "fresh"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "list"
+        },
+        {
+          "name": "model"
+        },
+        {
+          "name": "newTerminal"
+        },
+        {
+          "name": "remember"
+        },
+        {
+          "name": "session"
+        },
+        {
+          "name": "tab"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpSessionCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpSetStatusCmd",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpStatusCmd",
+      "fields": [
+        {
+          "name": "all"
+        },
+        {
+          "name": "budget"
+        },
+        {
+          "name": "dir"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "json"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpSummaryCmd",
+      "fields": [
+        {
+          "name": "dir"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "text"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpUpgradeCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.PrpUuidCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$BaseConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$BlockedCmd",
+      "fields": [
+        {
+          "name": "json"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$CentralCmd",
+      "fields": [
+        {
+          "name": "json"
+        },
+        {
+          "name": "sweep"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$ConcernConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$DepsCmd",
+      "fields": [
+        {
+          "name": "absent"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "local"
+        },
+        {
+          "name": "path"
+        },
+        {
+          "name": "reverse"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$FilesCmd",
+      "fields": [
+        {
+          "name": "allBases"
+        },
+        {
+          "name": "exact"
+        },
+        {
+          "name": "ext"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "pathsOnly"
+        },
+        {
+          "name": "project"
+        },
+        {
+          "name": "terms"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$FindCmd",
+      "fields": [
+        {
+          "name": "allBases"
+        },
+        {
+          "name": "folders"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "pathsOnly"
+        },
+        {
+          "name": "terms"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$ImpactCmd",
+      "fields": [
+        {
+          "name": "depth"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "path"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$InfoCmd",
+      "fields": [
+        {
+          "name": "json"
+        },
+        {
+          "name": "path"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$ListCmd",
+      "fields": [
+        {
+          "name": "base"
+        },
+        {
+          "name": "concern"
+        },
+        {
+          "name": "folders"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "maven"
+        },
+        {
+          "name": "pathsOnly"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$Root"
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$ScanCmd",
+      "fields": [
+        {
+          "name": "json"
+        },
+        {
+          "name": "noFiles"
+        },
+        {
+          "name": "sweepCentral"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.QueryCommands$WhereCmd",
+      "fields": [
+        {
+          "name": "coordinates"
+        },
+        {
+          "name": "json"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.SelfCli$InstallCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.SelfCli$UninstallCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.SelfCli$UpdateCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ShellCommands$EmitCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ShellCommands$InstallCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ShellCommands$ShellCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ShellCommands$StatusCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.ShellCommands$UninstallCmd"
+    },
+    {
+      "type": "littlejlib.proj.cli.WsCli"
+    },
+    {
+      "type": "littlejlib.proj.cli.WsListCmd",
+      "fields": [
+        {
+          "name": "all"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "json"
+        },
+        {
+          "name": "limit"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.cli.WsScanCmd",
+      "fields": [
+        {
+          "name": "depth"
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "ifStale"
+        },
+        {
+          "name": "json"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.daemon.DaemonCommand",
+      "fields": [
+        {
+          "name": "action"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.prp.ProjJson",
+      "fields": [
+        {
+          "name": "alias3"
+        },
+        {
+          "name": "alias4"
+        },
+        {
+          "name": "icon"
+        },
+        {
+          "name": "longName"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "prpGuide"
+        },
+        {
+          "name": "uuid"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.prp.ProjJson_A",
+      "fields": [
+        {
+          "name": "sub"
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.track.Note",
+      "fields": [
+        {
+          "name": "at"
+        },
+        {
+          "name": "kind"
+        },
+        {
+          "name": "prp"
+        },
+        {
+          "name": "refs"
+        },
+        {
+          "name": "session"
+        },
+        {
+          "name": "text"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "littlejlib.proj.track.Note_A",
+      "fields": [
+        {
+          "name": "sub"
+        }
+      ]
+    },
+    {
+      "type": "long[]"
+    },
+    {
+      "type": "org.apache.log4j.LogManager"
+    },
+    {
+      "type": "org.apache.logging.log4j.Logger"
+    },
+    {
+      "type": "org.fusesource.jansi.Ansi"
+    },
+    {
+      "type": "org.jboss.logmanager.LogManager"
+    },
+    {
+      "type": "org.jboss.threads.EnhancedQueueExecutor$MXBeanImpl"
+    },
+    {
+      "type": "org.jboss.threads.management.StandardThreadPoolMXBean"
+    },
+    {
+      "type": "org.xnio.XnioWorker"
+    },
+    {
+      "type": "org.xnio._private.Messages_$logger",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.jboss.logging.Logger"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.xnio._private.Messages_$logger_en"
+    },
+    {
+      "type": "org.xnio._private.Messages_$logger_en_US"
+    },
+    {
+      "type": "org.xnio.management.XnioProviderMXBean"
+    },
+    {
+      "type": "org.xnio.management.XnioServerMXBean"
+    },
+    {
+      "type": "org.xnio.management.XnioWorkerMXBean"
+    },
+    {
+      "type": "org.xnio.nio.Log_$logger",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.jboss.logging.Logger"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.xnio.nio.Log_$logger_en"
+    },
+    {
+      "type": "org.xnio.nio.Log_$logger_en_US"
+    },
+    {
+      "type": "org.xnio.nio.NioTcpServer"
+    },
+    {
+      "type": "org.xnio.nio.NioTcpServer$1"
+    },
+    {
+      "type": "org.xnio.nio.NioXnio$3"
+    },
+    {
+      "type": "org.xnio.nio.NioXnioProvider"
+    },
+    {
+      "type": "org.xnio.nio.NioXnioWorker"
+    },
+    {
+      "type": "org.xnio.nio.NioXnioWorker$NioWorkerMetrics"
+    },
+    {
+      "type": "org.xnio.nio.WorkerThread"
+    },
+    {
+      "type": "picocli.CommandLine$AutoHelpMixin",
+      "fields": [
+        {
+          "name": "helpRequested"
+        },
+        {
+          "name": "versionRequested"
+        }
+      ]
+    },
+    {
+      "type": "short[]"
+    },
+    {
+      "type": "sun.management.ClassLoadingImpl"
+    },
+    {
+      "type": "sun.management.CompilationImpl"
+    },
+    {
+      "type": "sun.management.ManagementFactoryHelper$1"
+    },
+    {
+      "type": "sun.management.ManagementFactoryHelper$PlatformLoggingImpl"
+    },
+    {
+      "type": "sun.management.MemoryImpl"
+    },
+    {
+      "type": "sun.management.MemoryManagerImpl"
+    },
+    {
+      "type": "sun.management.MemoryPoolImpl"
+    },
+    {
+      "type": "sun.management.RuntimeImpl"
+    },
+    {
+      "type": "sun.management.VMManagementImpl",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "compTimeMonitoringSupport"
+        },
+        {
+          "name": "currentThreadCpuTimeSupport"
+        },
+        {
+          "name": "objectMonitorUsageSupport"
+        },
+        {
+          "name": "otherThreadCpuTimeSupport"
+        },
+        {
+          "name": "remoteDiagnosticCommandsSupport"
+        },
+        {
+          "name": "synchronizerUsageSupport"
+        },
+        {
+          "name": "threadAllocatedMemorySupport"
+        },
+        {
+          "name": "threadContentionMonitoringSupport"
+        }
+      ]
+    },
+    {
+      "type": "sun.misc.Unsafe",
+      "fields": [
+        {
+          "name": "theUnsafe"
+        }
+      ]
+    },
+    {
+      "type": "sun.net.www.protocol.http.Handler",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DRBG",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA224withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA256withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA224",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.X509Factory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.PSSParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAKeyFactory$Legacy",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAPSSSignature",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA224withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityInfoAccessExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.BasicConstraintsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CRLDistributionPointsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CertificatePoliciesExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.ExtendedKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.KeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.NetscapeCertTypeExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.PrivateKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.text.resources.BreakIteratorInfo"
+    },
+    {
+      "type": "sun.text.resources.BreakIteratorResources"
+    },
+    {
+      "type": "sun.text.resources.BreakIteratorResources_en"
+    },
+    {
+      "type": "sun.text.resources.BreakIteratorResources_en_US"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en_US"
+    },
+    {
+      "type": "sun.util.resources.cldr.CalendarData"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en_US"
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/services/com.arcadedb.server.ServerPlugin"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
+    },
+    {
+      "glob": "META-INF/services/org.jboss.logging.LoggerProvider"
+    },
+    {
+      "glob": "META-INF/services/org.xnio.XnioProvider"
+    },
+    {
+      "glob": "arcadedb-log.properties"
+    },
+    {
+      "glob": "com/arcadedb/arcadedb.properties"
+    },
+    {
+      "glob": "io/undertow/version.properties"
+    },
+    {
+      "glob": "logging.properties"
+    },
+    {
+      "glob": "org/jboss/threads/Version.properties"
+    },
+    {
+      "glob": "org/xnio/Version.properties"
+    },
+    {
+      "glob": "org/xnio/nio/Version.properties"
+    },
+    {
+      "glob": "prp-guide/prp-guide.md"
+    },
+    {
+      "glob": "static/index.html"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/text/resources/LineBreakIteratorData"
+    },
+    {
+      "module": "jdk.jfr",
+      "glob": "jdk/jfr/internal/query/view.ini"
+    }
+  ],
+  "foreign": {
+    "downcalls": [
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": []
+      },
+      {
+        "returnType": "jboolean",
+        "parameterTypes": [
+          "jint"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "jint"
+        ]
+      }
+    ]
+  }
+}

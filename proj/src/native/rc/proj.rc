@@ -1,0 +1,28 @@
+#include <winver.h>
+
+1 ICON "proj.ico"
+
+1 VERSIONINFO
+FILEVERSION ${parsedVersion.majorVersion},${parsedVersion.minorVersion},${parsedVersion.incrementalVersion},0
+PRODUCTVERSION ${parsedVersion.majorVersion},${parsedVersion.minorVersion},${parsedVersion.incrementalVersion},0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "FileDescription", "proj"
+      VALUE "ProductName", "proj"
+      VALUE "CompanyName", "littlejlib"
+      VALUE "FileVersion", "${project.version}"
+      VALUE "ProductVersion", "${project.version}"
+      VALUE "OriginalFilename", "proj.exe"
+      VALUE "InternalName", "proj"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

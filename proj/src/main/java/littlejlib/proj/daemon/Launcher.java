@@ -60,7 +60,17 @@ public final class Launcher {
     /// Launched by a jr exe, the daemon is that exe again, so the JVM runs inside its process and
     /// Task Manager shows `proj`, not `java`. The exe's baked VM args are kept, caps swapped in,
     /// through `-Xjr:vm.args` rather than an environment variable the daemon's terminals would inherit.
+    static final List<String> NATIVE_CAPS = List.of("-Xms16m", "-Xmx768m", "-Xmn48m");
+
     static List<String> command() throws java.io.IOException {
+        if (littlejlib.proj.util.Native.image()) {
+            var self = new ArrayList<String>();
+            self.add(littlejlib.proj.util.Native.exe().toString());
+            self.add("-Duser.home=" + System.getProperty("user.home"));
+            self.addAll(NATIVE_CAPS);
+            self.add("--daemon");
+            return self;
+        }
         var exe = System.getProperty(JR_PROP + "exe");
         if (exe != null && Files.isRegularFile(Path.of(exe))) {
             var vmArgs = new ArrayList<>(bakedVmArgs().stream().filter(a -> !isMemoryFlag(a)).toList());

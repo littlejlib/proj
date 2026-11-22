@@ -37,20 +37,8 @@ public class PrpManagerActions {
         String editor = settings != null ? settings.getSingleFileEditor() : null;
 
         if (editor == null || editor.isEmpty()) {
-            // Fallback to Desktop API
-            try {
-                if (java.awt.Desktop.isDesktopSupported()) {
-                    java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
-                    if (desktop.isSupported(java.awt.Desktop.Action.EDIT)) {
-                        desktop.edit(filePath.toFile());
-                        showNotification("Opened in default editor");
-                        return;
-                    }
-                }
-            } catch (IOException e) {
-                showNotification("Error: Editor not configured");
-                return;
-            }
+            showNotification(littlejlib.proj.util.OpenFile.open(filePath)
+                    ? "Opened in default editor" : "Error: Editor not configured");
             return;
         }
 
