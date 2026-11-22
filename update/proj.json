@@ -1,0 +1,25 @@
+{
+  "format" : 1,
+  "app" : "io.github.littlejlib:proj",
+  "channels" : {
+    "stable" : "0.2.0"
+  },
+  "releases" : [ {
+    "version" : "0.2.0",
+    "released" : "2026-11-22T08:21:14Z",
+    "exe" : {
+      "windows-x86_64" : {
+        "sha256" : "a61cb01f765e2e7ee04196dd0009faee7a09fb70e09146656bb47fdc8422636a",
+        "urls" : [ "https://github.com/littlejlib/proj/releases/download/v0.2.0/proj.exe" ]
+      },
+      "macos-arm64" : {
+        "sha256" : "cce037a11bc6e4ec51e4e5da21c23377714b452baad23f8d18c68550bdc3b668",
+        "urls" : [ "https://github.com/littlejlib/proj/releases/download/v0.2.0/proj-macos-arm64" ]
+      },
+      "macos-x86_64" : {
+        "sha256" : "0199c270a1da2fc0b3d65d62b393af56c4731c2f0c9969b0b6979ea1ca32acf0",
+        "urls" : [ "https://github.com/littlejlib/proj/releases/download/v0.2.0/proj-macos-x86_64" ]
+      }
+    }
+  } ]
+}
