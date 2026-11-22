@@ -1,0 +1,8 @@
+title: proj
+description: Every repository on your machine in one index, and the PRP tool for coding agents.
+theme: jekyll-theme-minimal
+exclude:
+  - proj
+  - test-scripts
+  - .github
+  - README.md
