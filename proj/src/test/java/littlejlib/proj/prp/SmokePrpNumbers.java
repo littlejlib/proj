@@ -88,7 +88,9 @@ public class SmokePrpNumbers {
         var b = PrpCreator.create(prp, "second new", null, null);
         check("0001".equals(a.index()) && "0002".equals(b.index()), "new folder: " + a.index() + " " + b.index());
         check(a.file().getFileName().toString().equals("000100-first_new.md"), "main name " + a.file().getFileName());
-        check(Files.exists(prp.resolve("000101.status.md")), "status at slot 01");
+        check(!Files.exists(prp.resolve("000101.status.md")), "no status markdown file (the timeline is status.jsonl)");
+        var head = PrpHeader.of(a.file());
+        check(head.state() == PrpState.NEW && head.createdUtc != null && head.lastWorkedOnUtc != null, "a new PRP starts as new, created now: " + head.status + " " + head.createdUtc);
         Files.writeString(prp.resolve("000901.status.md"), "orphan");
         check("000A".equals(PrpCreator.create(prp, "after orphan", null, null).index()), "an orphan status file holds its number, then 000A");
         check(AgentLauncher.findPrp(prp.getParent(), "1").getFileName().toString().equals("000100-first_new.md"), "findPrp 1");
@@ -96,9 +98,9 @@ public class SmokePrpNumbers {
         Files.writeString(prp.resolve("0001ZZ-01.logs.md"), "x");
         check("0001ZZ-02.logs.md".equals(PrpLogs.nextName(prp, "0001")), "next log serial");
         check("0001".equals(PrpPrompt.indexOf(a.file())) && PrpCreator.subFileFor(prp, "0001", 1, "notes").getFileName().toString().equals("000102-notes.md"), "indexOf, sub-file");
-        check(TabName.derive(a.file(), "acme").equals("acme-1-first"), "short tab name: " + TabName.derive(a.file(), "acme"));
+        check(TabName.derive(a.file(), "acme").equals("acme-1-first-new"), "short tab name: " + TabName.derive(a.file(), "acme"));
         Files.writeString(prp.resolve("001000-big.md"), "x");
-        check(TabName.derive(a.file(), "acme").equals("acme-01-first"), "two symbols once needed: " + TabName.derive(a.file(), "acme"));
+        check(TabName.derive(a.file(), "acme").equals("acme-01-first-new"), "two symbols once needed: " + TabName.derive(a.file(), "acme"));
         check(TabName.projectPartOf("acme-01-first", "0001").equals("acme") && TabName.projectPartOf("acme-1-first", "0001").equals("acme"), "projectPartOf");
         var list = PrpCreator.list(prp).stream().map(PrpEntry::getIndex).toList();
         check(list.equals(List.of("0001", "0002", "000A", "0010")), "scanner, README ignored: " + list);
@@ -110,7 +112,7 @@ public class SmokePrpNumbers {
         for (var i = 1; i <= 5; i++) Files.writeString(prp.resolve(String.format("%02d-prp-old_%d.md", i, i)), "x");
         var a = PrpCreator.create(prp, "first new", null, null);
         check("06".equals(a.index()) && a.file().getFileName().toString().equals("06-prp-first_new.md"), "legacy folder keeps legacy: " + a.file());
-        check(Files.exists(prp.resolve("06-prp.status.md")), "legacy status file");
+        check(!Files.exists(prp.resolve("06-prp.status.md")), "no status markdown file in a legacy folder either");
         try {
             PrpCreator.create(prp, "same number", "6", null);
             check(false, "explicit number already used");

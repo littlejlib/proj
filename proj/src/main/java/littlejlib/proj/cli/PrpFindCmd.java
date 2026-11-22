@@ -56,7 +56,7 @@ public class PrpFindCmd implements Runnable {
             var hits = q.isEmpty() ? List.<GlobalLine>of() : GlobalFind.find(all, q);
             if (!q.isEmpty() && !hits.isEmpty() && hits.stream().anyMatch(h -> !GlobalFind.stillThere(h)))
                 hits = GlobalFind.find(all = fresh(true), q);
-            if (openOnly) hits = hits.stream().filter(h -> !"closed".equals(h.state())).toList();
+            if (openOnly) hits = hits.stream().filter(h -> !"closed".equals(h.state()) && !"cancelled".equals(h.state())).toList();
             if (q.isEmpty()) {
                 PrpCommands.OUT.println(all.size() + " PRPs in " + GlobalIndex.file());
                 return;

@@ -15,7 +15,7 @@ public final class Views {
     public static final int LAST_NOTES = 5, TITLE_SHOWN = 100;
 
     public static void timeline(Budget b, PrpEntry prp, String uuid, PrpMeta meta, List<Note> notes, boolean all, PrpRefs prps) {
-        b.line("PRP " + prp.getIndex() + "  " + prp.getName() + "  [" + (prp.getStatus() == PrpStatus.CLOSED ? "closed" : "open") + "]  " + (uuid == null ? "" : uuid));
+        b.line("PRP " + prp.getIndex() + "  " + prp.getName() + "  [" + prp.getStateKey() + "]  " + (uuid == null ? "" : uuid));
         if (meta != null && meta.summary() != null) b.line("summary: " + meta.summary());
         if (meta != null && meta.related() != null)
             for (var r : meta.related()) b.line("related: " + r.kind() + " " + prps.label(r.prp()) + (prps.get(r.prp()) == null ? "" : " (" + r.prp() + ")") + (r.note() == null ? "" : "  " + r.note()));

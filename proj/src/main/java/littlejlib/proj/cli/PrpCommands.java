@@ -679,6 +679,7 @@ public final class PrpCommands {
         var m = new LinkedHashMap<String, Object>();
         m.put("index", p.getIndex());
         m.put("status", p.getStatus() == null ? "" : p.getStatus().name().toLowerCase());
+        m.put("state", p.getStateKey());     // prp_status of the head: new, in_progress, ... closed; "open" when the head has none yet
         m.put("name", p.getName());
         var uuid = p.getMainFile() == null ? null : PrpUuid.read(p.getMainFile());
         m.put("uuid", uuid == null ? "" : uuid);

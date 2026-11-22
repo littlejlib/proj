@@ -19,6 +19,13 @@ import java.util.stream.Collectors;
 
 public class AITemplateManager {
 
+    /** [CLOSED] or [ACTIVE] from the PRP's own head (PRP 001R). */
+    static String statusOf(Path prpMainFile) {
+        var s = littlejlib.proj.prp.PrpHead.stateOf(prpMainFile);
+        return s != null && s.finished() ? "[CLOSED]" : "[ACTIVE]";
+    }
+
+
 
 
 
@@ -252,7 +259,7 @@ public class AITemplateManager {
                 if (matcher.matches()) {
                     String index = matcher.group(1);
                     String name = matcher.group(2);
-                    String status = fileName.contains(".closed.") ? "[CLOSED]" : "[ACTIVE]";
+                    String status = statusOf(prp);
                     System.out.println("  " + index + ": " + name + " " + status);
                 }
             }
@@ -350,7 +357,7 @@ public class AITemplateManager {
             System.out.println("\nAvailable PRPs:");
             for (int i = 0; i < prps.size(); i++) {
                 String fileName = prps.get(i).getFileName().toString();
-                String status = fileName.contains(".closed.") ? "[CLOSED]" : "[ACTIVE]";
+                String status = statusOf(prps.get(i));
                 System.out.println((i + 1) + ". " + fileName + " " + status);
             }
             System.out.println("0. Cancel");
@@ -364,20 +371,9 @@ public class AITemplateManager {
             int index = Integer.parseInt(choice) - 1;
             if (index >= 0 && index < prps.size()) {
                 Path oldPath = prps.get(index);
-                String fileName = oldPath.getFileName().toString();
-                String newFileName;
-
-                if (fileName.contains(".closed.")) {
-                    newFileName = fileName.replace(".closed.", ".");
-                    System.out.println("Reopening PRP...");
-                } else {
-                    newFileName = fileName.replace(".md", ".closed.md");
-                    System.out.println("Closing PRP...");
-                }
-
-                Path newPath = oldPath.getParent().resolve(newFileName);
-                Files.move(oldPath, newPath);
-                System.out.println("PRP renamed to: " + newFileName);
+                // Closed is a status in the PRP's head (PRP 001R), not a file name.
+                var now = littlejlib.proj.prp.PrpHead.toggleClosed(oldPath);
+                System.out.println(oldPath.getFileName() + " is now " + now.key());
                 System.out.flush();
 
             } else {

@@ -103,6 +103,7 @@ public final class Feedback {
             var t = text.replaceAll("\\s*\\R\\s*", " ");
             if (t.length() > Timeline.MAX_TEXT) t = t.substring(0, Timeline.MAX_TEXT - 40) + "... (full text: plan show " + item.id() + ")";
             Timeline.add(prpDir, e.getIndex(), item.prp(), kind, t, null, SESSION);
+            littlejlib.proj.prp.PrpHead.onWork(e.getMainFile(), kind);
             return;
         }
     }

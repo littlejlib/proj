@@ -24,6 +24,7 @@ final class LogsJsonl {
                 && n.refs() != null && n.refs().contains(name));
         if (!noted) Timeline.add(prpDir, entry.getIndex(), TrackCli.uuid(entry), "log",
                 "session exported as " + name, List.of(name), w.sessionId());
+        littlejlib.proj.prp.PrpHead.onWork(entry.getMainFile(), "log");
         return w;
     }
 

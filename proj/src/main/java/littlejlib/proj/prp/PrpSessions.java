@@ -152,6 +152,7 @@ public final class PrpSessions {
         // it gets corrected, so this overwrites rather than filling a blank.
         learnKey(project, prpIndex, tabName);
         noteStart(sessionId, prpFile, prpIndex, tabName);
+        PrpHead.onWork(prpFile, "start");           // a session started or resumed on it: a key moment for the head (PRP 001R)
         var stamp = System.currentTimeMillis();
         if (DB.isOpen()) {
             quiet(() -> {

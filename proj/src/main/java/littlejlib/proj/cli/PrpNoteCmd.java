@@ -39,6 +39,7 @@ public class PrpNoteCmd implements Runnable {
             var entry = PrpCommands.resolve(prpDir, index);
             var n = Timeline.add(prpDir, entry.getIndex(), TrackCli.uuid(entry), kind, String.join(" ", text), refs,
                     Session.current(session));
+            littlejlib.proj.prp.PrpHead.onWork(entry.getMainFile(), n.kind());
             PrpCommands.OUT.println(entry.getIndex() + "  " + Now.shown(n.at()) + "  " + n.kind() + "  " + n.text());
         });
     }

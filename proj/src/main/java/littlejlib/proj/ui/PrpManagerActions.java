@@ -85,23 +85,10 @@ public class PrpManagerActions {
      * Toggles PRP status between ACTIVE and CLOSED
      */
     public static void togglePrpStatus(PrpEntry prp) {
-        Path oldPath = prp.getMainFile();
-        String oldName = oldPath.getFileName().toString();
-        String newName;
-
-        if (prp.getStatus().toString().equals("CLOSED")) {
-            // Reopen: remove .closed
-            newName = oldName.replace(".closed.", ".");
-        } else {
-            // Close: add .closed
-            newName = oldName.replace(".md", ".closed.md");
-        }
-
-        Path newPath = oldPath.getParent().resolve(newName);
-
+        // Closed is a status in the PRP's head (PRP 001R); the file is not renamed.
         try {
-            Files.move(oldPath, newPath);
-            showNotification("PRP status toggled");
+            var now = littlejlib.proj.prp.PrpHead.toggleClosed(prp.getMainFile());
+            showNotification("PRP is now " + now.key());
         } catch (IOException e) {
             showNotification("Error: " + e.getMessage());
         }

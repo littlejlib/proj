@@ -12,8 +12,8 @@ A PRP (Project Requirement Prompt) is one requirement of a project. Its files ar
 
 ## The files of PRP 0007 (the first 4 symbols are the PRP, the next 2 the slot)
 
-- `000700-<name>.md`: the requirement, written by the user. Do not edit it. Only proj writes into it (the front matter at the top, and `<user-instructions>` blocks added by `proj prp instructions`; those are the user's own words, inserted by a tool, not an AI edit). Closed: `000700-<name>.closed.md`.
-- Its front matter: `prp_number` (plain number), `prp_number_b34str` ("0007"), `prp_name`, `prp_short_name` (names the terminal tab: `<ticket>-<short name>`), `prp_3_letter_name` (unique in the project), `prp_uuid`, `conventions`. proj suggests the two short names when it creates the PRP; the user may rename them in the file.
+- `000700-<name>.md`: the requirement, written by the user. Do not edit it. Only proj writes into it (the front matter at the top, and `<user-instructions>` blocks added by `proj prp instructions`; those are the user's own words, inserted by a tool, not an AI edit). A PRP is never renamed to close it: closing is `prp_status: closed` in the front matter.
+- Its front matter: `prp_number` (plain number), `prp_number_b34str` ("0007"), `prp_name`, `prp_short_name` (names the terminal tab: `<ticket>-<short name>`), `prp_3_letter_name` (unique in the project), `prp_uuid`, `prp_status`, `created_utc`, `last_worked_on_utc`, `conventions`. proj suggests the two short names when it creates the PRP; the user may rename them in the file. `prp_status` is one of `new`, `in_progress`, `in_review` (built, waiting for the user to confirm), `on_hold` (paused by choice), `blocked` (waiting on something outside), `closed`, `cancelled` (dropped without doing it); anything else is refused. The two times are quoted UTC (`"2026-11-22T06:35:00Z"`). proj sets all three itself: a note, a session start or resume, or a status change moves the status where it belongs and stamps `last_worked_on_utc` (at most hourly); an older PRP gets the keys the next time proj touches it. Set the status by hand with `proj prp set-status <number> <value>`. A PRP the user has open in notepadfx is changed only through notepadfx, never on disk.
 - `000701.status.jsonl`: the PRP's timeline (what was done, tested, decided), one line per note, each naming the session that wrote it. Write to it ONLY with `proj prp note`; read it with `proj prp status 7`. An older `000701.status.md` may exist: read it as history, never add to it.
 - `000701.meta.json`: summary and relations to other PRPs: `proj prp summary`, `proj prp relate`.
 - `000702-<what>.md`, `000703-<what>.md` ...: your own notes, reports, drafts and data for this PRP, in the next free slot. Put such files here, never in the project root.
@@ -51,6 +51,6 @@ A PRP (Project Requirement Prompt) is one requirement of a project. Its files ar
 
 ## Ending a cycle (the context is nearly full, or the work is done)
 
-Run BOTH, for real, every time: `proj prp logs <number>` and `proj prp instructions <number>`. Never run only one, never only `--dry-run`. Both use this session (`CLAUDE_CODE_SESSION_ID`) by default. To close the PRP: `proj prp note <number> "<why>" -k closed`, then rename the PRP file to `.closed.md`.
+Run BOTH, for real, every time: `proj prp logs <number>` and `proj prp instructions <number>`. Never run only one, never only `--dry-run`. Both use this session (`CLAUDE_CODE_SESSION_ID`) by default. To close the PRP: `proj prp note <number> "<why>" -k closed`, which sets `prp_status: closed` in its head. Do not rename the file.
 
 `proj prp --help` and `proj prp <verb> --help` list every command.

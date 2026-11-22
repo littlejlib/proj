@@ -794,6 +794,7 @@ public class Main implements Runnable {
                  littlejlib.proj.cli.PrpUuidCmd.class,
                  littlejlib.proj.cli.PrpNoteCmd.class,
                  littlejlib.proj.cli.PrpStatusCmd.class,
+                 littlejlib.proj.cli.PrpSetStatusCmd.class,
                  littlejlib.proj.cli.PrpSummaryCmd.class,
                  littlejlib.proj.cli.PrpRelateCmd.class,
                  littlejlib.proj.cli.PlanCli.class,

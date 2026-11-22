@@ -9,6 +9,8 @@ public class PrpEntry {
     private final String index;
     private final String name;
     private final PrpStatus status;
+    // prp_status of the head (PRP 001R), null for a file whose head has none yet.
+    private final PrpState state;
     private final Path mainFile;
     private final Path statusFile;  // Can be null
     private final List<Path> subFiles;
@@ -20,9 +22,15 @@ public class PrpEntry {
 
     public PrpEntry(String index, String name, PrpStatus status, Path mainFile, Path statusFile,
                     List<Path> subFiles, long lastModified) {
+        this(index, name, status, null, mainFile, statusFile, subFiles, lastModified);
+    }
+
+    public PrpEntry(String index, String name, PrpStatus status, PrpState state, Path mainFile, Path statusFile,
+                    List<Path> subFiles, long lastModified) {
         this.index = index;
         this.name = name;
         this.status = status;
+        this.state = state;
         this.mainFile = mainFile;
         this.statusFile = statusFile;
         this.subFiles = new ArrayList<>(subFiles);
@@ -39,6 +47,16 @@ public class PrpEntry {
 
     public PrpStatus getStatus() {
         return status;
+    }
+
+    /** The head's prp_status, or null when the head has none. */
+    public PrpState getState() {
+        return state;
+    }
+
+    /** The state as shown and indexed: the head's value, else closed or open from the file name. */
+    public String getStateKey() {
+        return state != null ? state.key() : status == PrpStatus.CLOSED ? "closed" : "open";
     }
 
     public Path getMainFile() {

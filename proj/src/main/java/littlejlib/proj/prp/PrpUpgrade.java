@@ -61,6 +61,9 @@ public final class PrpUpgrade {
         up.upgrade(file, false, false);
     }
 
+    /** Off in tests, which must not reach the real session store. */
+    boolean repoint = true;
+
     public Result upgrade(Path file, boolean dryRun) throws IOException {
         return upgrade(file, dryRun, true);
     }
@@ -70,7 +73,7 @@ public final class PrpUpgrade {
         var eol = text.contains("\r\n") ? "\r\n" : "\n";
         var lines = List.of(text.split("\r?\n", -1));
         var h = PrpHeader.parse(lines);
-        var was = describe(h);
+        var was = describe(h) + (file.getFileName().toString().endsWith(".closed.md") ? ", closed by file name" : "");
 
         var prpDir = file.getParent();
         var project = prpDir.getParent();
@@ -81,6 +84,17 @@ public final class PrpUpgrade {
         next.name = h.name != null && !h.name.isBlank() ? h.name : fileName;
         next.uuid = h.uuid != null && Base34.valid(Base34.normalize(h.uuid)) ? Base34.normalize(h.uuid) : Base34.mint();
         next.extra.putAll(h.extra);
+        // Closed is a status in the head now, not a file name: a .closed.md file is renamed to .md and says so (PRP 001R).
+        var closedName = file.getFileName().toString().endsWith(".closed.md");
+        next.status = closedName ? PrpState.CLOSED.key() : h.status;
+        next.createdUtc = h.createdUtc;
+        next.lastWorkedOnUtc = h.lastWorkedOnUtc;
+        if (!backup && next.status == null) {       // a brand-new PRP: it starts as new, created now
+            var now = PrpHead.utc(java.time.Instant.now());
+            next.status = PrpState.NEW.key();
+            next.createdUtc = now;
+            next.lastWorkedOnUtc = now;
+        }
         var pick = number == null ? null : chosen.get(key(project, number));
         var taken = takenThree.computeIfAbsent(prpDir, d -> new HashSet<>());
         if (h.shortName != null && !h.shortName.isBlank()) {
@@ -102,17 +116,33 @@ public final class PrpUpgrade {
         var out = new ArrayList<>(next.render());
         out.addAll(body);
         var newText = String.join(eol, out);
-        var changed = !newText.equals(text);
+        var target = closedName ? file.resolveSibling(file.getFileName().toString().replaceFirst("\\.closed\\.md$", ".md")) : file;
+        if (closedName && Files.exists(target)) throw new IOException(target.getFileName() + " exists already: cannot rename " + file.getFileName() + " onto it");
+        var changed = closedName || !newText.equals(text);
+        if (changed && !dryRun && backup && Notepadfx.isOpen(file)) throw new IOException("open in notepadfx: close it there (or run again later)");
         if (changed && !dryRun) {
             if (backup) {
                 Files.createDirectories(backupDir);
                 var copy = backupDir.resolve(file.toAbsolutePath().normalize().toString().replaceAll("[:\\\\/ ]+", "_"));
                 Files.copy(file, copy, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
-            Files.writeString(file, newText, StandardCharsets.UTF_8);
+            Files.writeString(target, newText, StandardCharsets.UTF_8);
+            if (closedName) {
+                Files.delete(file);
+                if (repoint) repointSessions(file, target, number);
+            }
         }
         return new Result(file, changed, was, "number " + next.number + ", short " + next.shortName + ", " + next.threeLetters
-                + (h.uuid == null ? ", new uuid" : ""));
+                + (h.uuid == null ? ", new uuid" : "") + (closedName ? ", renamed to " + target.getFileName() + " with prp_status: closed" : ""));
+    }
+
+    /** The recorded sessions of the PRP follow its renamed file. */
+    static void repointSessions(Path from, Path to, String number) {
+        try {
+            for (var s : PrpSessions.of(from)) PrpSessions.repoint(s.sessionId(), to, number, s.tabName());
+        } catch (RuntimeException e) {
+            System.err.println("[PrpUpgrade] sessions of " + from.getFileName() + " not repointed: " + e.getMessage());
+        }
     }
 
     static String describe(PrpHeader h) {

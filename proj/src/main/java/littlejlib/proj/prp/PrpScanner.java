@@ -43,7 +43,9 @@ public class PrpScanner {
         var b = prpMap.computeIfAbsent(index, PrpBuilder::new);
         var main = PrpFiles.mainMatcher(fileName);
         if (main.matches()) {
-            b.setName(main.group(2)).setStatus(main.group(3) != null ? PrpStatus.CLOSED : PrpStatus.ACTIVE).setMainFile(filePath);
+            // Closed is a status in the head (PRP 001R); the name only decides for a file whose head has none yet.
+            var state = PrpHead.stateOf(filePath);
+            b.setName(main.group(2)).setState(state).setStatus(state != null ? state.status() : main.group(3) != null ? PrpStatus.CLOSED : PrpStatus.ACTIVE).setMainFile(filePath);
             return;
         }
         if (fileName.endsWith(".status.md") && PrpFiles.statusMd(filePath.getParent(), index).getFileName().toString().equals(fileName)) {
@@ -60,6 +62,7 @@ public class PrpScanner {
         private final String index;
         private String name;
         private PrpStatus status = PrpStatus.ACTIVE;
+        private PrpState state;
         private Path mainFile;
         private Path statusFile;
         private List<Path> subFiles = new ArrayList<>();
@@ -70,6 +73,11 @@ public class PrpScanner {
 
         PrpBuilder setName(String name) {
             this.name = name;
+            return this;
+        }
+
+        PrpBuilder setState(PrpState state) {
+            this.state = state;
             return this;
         }
 
@@ -98,7 +106,7 @@ public class PrpScanner {
                 name = "unknown";
             }
             subFiles.sort(Comparator.comparing(p -> p.getFileName().toString()));
-            return new PrpEntry(index, name, status, mainFile, statusFile, subFiles, newest());
+            return new PrpEntry(index, name, status, state, mainFile, statusFile, subFiles, newest());
         }
 
         long newest() {

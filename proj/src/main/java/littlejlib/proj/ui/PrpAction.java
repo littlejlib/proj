@@ -30,7 +30,7 @@ public enum PrpAction {
     FOLDER("Fldr", "Open prp folder", "📂", Palette.MANILA, 6,
             "Open the prp folder in file explorer", Palette.AMBER),
     TOGGLE("Toggle", "Toggle active/closed", "🔁", Palette.SLATE, 7,
-            "Rename between NN-prp-name.md and NN-prp-name.closed.md", Palette.PINK),
+            "Close the PRP, or reopen it: sets prp_status in its head (the file is not renamed)", Palette.PINK),
     AGENT("Agent", "Start coding agent", "🚀", Palette.LEAF, 8,
             "Open a terminal at the PROJECT root - not the prp folder - running the coding agent "
                     + "on this PRP", Palette.BLUE),

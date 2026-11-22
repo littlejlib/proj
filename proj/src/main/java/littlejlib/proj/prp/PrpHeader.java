@@ -10,11 +10,15 @@ import java.util.regex.Pattern;
  * The head of a PRP main file (PRP 001R). Written as YAML front matter:
  * <pre>
  * ---
- * prp_number: "0001"
+ * prp_number: 1
+ * prp_number_b34str: "0001"
  * prp_name: export
  * prp_3_letter_name: exp
  * prp_short_name: export
  * prp_uuid: 0al4a9rafajvsplsdzg5wyfeqx
+ * prp_status: in_progress
+ * created_utc: "2026-11-22T06:35:00Z"
+ * last_worked_on_utc: "2026-11-22T09:10:00Z"
  * conventions: before anything else, run `proj prp guide` ...
  * ---
  * </pre>
@@ -27,9 +31,12 @@ public final class PrpHeader {
     public static final String CONVENTIONS = "before anything else, run `proj prp guide` and follow what it prints. It is the current PRP (project requirements prompt) convention and is managed by the proj tool. If proj is not installed and not found in path refer https://littlejlib.github.io/proj/ for download and install.";
 
     /** {@code prp_number} is the plain value of the base34 number ({@code 0001} is 1, {@code 001Q} is 58); {@code prp_number_b34str} the 4 symbols. */
-    public static final List<String> KEYS = List.of("prp_number", "prp_number_b34str", "prp_name", "prp_3_letter_name", "prp_short_name", "prp_uuid", "conventions");
+    public static final List<String> KEYS = List.of("prp_number", "prp_number_b34str", "prp_name", "prp_3_letter_name", "prp_short_name", "prp_uuid",
+            "prp_status", "created_utc", "last_worked_on_utc", "conventions");
 
     public String number, name, threeLetters, shortName, uuid, conventions;
+    /** {@code prp_status} as written (see {@link PrpState}), and the two times, quoted UTC like {@code "2026-11-22T06:35:00Z"}; null when the key is absent. */
+    public String status, createdUtc, lastWorkedOnUtc;
     /** Keys of a YAML head that proj does not know, kept as they were. */
     public final Map<String, String> extra = new LinkedHashMap<>();
     /** The line where the body starts. */
@@ -48,6 +55,11 @@ public final class PrpHeader {
         } catch (java.io.IOException | RuntimeException e) {
             return new PrpHeader();
         }
+    }
+
+    /** The state in {@code prp_status}, or null when the key is absent or holds something outside the set. */
+    public PrpState state() {
+        return PrpState.parse(status);
     }
 
     /** {@code prp_short_name} of a PRP file (what its terminal tab is named after), or null. */
@@ -105,6 +117,9 @@ public final class PrpHeader {
             case "prp_3_letter_name" -> threeLetters = value;
             case "prp_short_name" -> shortName = value;
             case "prp_uuid" -> uuid = value;
+            case "prp_status" -> status = value;
+            case "created_utc" -> createdUtc = value;
+            case "last_worked_on_utc" -> lastWorkedOnUtc = value;
             case "conventions" -> conventions = value;
             default -> extra.put(key, value);
         }
@@ -126,6 +141,9 @@ public final class PrpHeader {
         if (threeLetters != null) out.add("prp_3_letter_name: " + quote(threeLetters, false));
         if (shortName != null) out.add("prp_short_name: " + quote(shortName, false));
         if (uuid != null) out.add("prp_uuid: " + quote(uuid, false));
+        if (status != null) out.add("prp_status: " + quote(status, false));
+        if (createdUtc != null) out.add("created_utc: " + quote(createdUtc, true));
+        if (lastWorkedOnUtc != null) out.add("last_worked_on_utc: " + quote(lastWorkedOnUtc, true));
         out.add("conventions: " + quote(conventions == null ? CONVENTIONS : conventions, false));
         extra.forEach((k, v) -> out.add(k + ": " + quote(v, false)));
         out.add("---");

@@ -304,8 +304,8 @@ public final class PrpPanel {
 
     void perform(PrpAction action, PrpNode node) {
         PrpActions.perform(action, node, settings, stage(), status::setText);
-        // The rename lands on disk before this returns, so a reload here shows the new state rather
-        // than leaving a row that says ACTIVE over a file now called .closed.md.
+        // The change lands before this returns, so a reload here shows the new state rather
+        // than leaving a row that says ACTIVE over a PRP whose head now says closed.
         if (PrpActions.mutatesList(action)) reload();
     }
 

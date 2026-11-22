@@ -57,7 +57,7 @@ public final class PrpIndex {
         var newest = Math.max(e.getLastModified(), Math.max(PrpScanner.mtime(Timeline.file(prpDir, e.getIndex())),
                 PrpScanner.mtime(MetaFile.file(prpDir, e.getIndex()))));
         return new IndexLine().uuid(uuid == null ? "" : uuid).number(e.getIndex()).name(e.getName())
-                .file(e.getMainFile().getFileName().toString()).state(e.getStatus() == PrpStatus.CLOSED ? "closed" : "open")
+                .file(e.getMainFile().getFileName().toString()).state(e.getStateKey())
                 .summary(meta == null ? null : meta.summary()).related(related)
                 .progress(state == null ? null : state.kind()).progressAt(state == null ? null : state.at())
                 .notes(notes.size()).openItems(uuid == null ? 0 : open.getOrDefault(uuid, 0)).updated(iso(newest))
