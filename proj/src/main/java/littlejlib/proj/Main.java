@@ -125,6 +125,12 @@ public class Main implements Runnable {
             System.exit(ShellInit.emit(args.length > 1 ? args[1] : null));
         }
 
+        // install, update and uninstall put the exe itself in place; they need no settings, and on a profile that has
+        // never run proj the first-run prompt below would stop them.
+        if (args.length > 0 && java.util.Set.of("install", "update", "uninstall").contains(args[0])) {
+            System.exit(new CommandLine(new Main()).execute(args));
+        }
+
         // The adapter passes --print-cd, which tells Navigate that something is reading
         // stdout, so it should not also nag or touch the clipboard.
         var forwarded = args;

@@ -1,12 +1,17 @@
 # Builds proj.exe as a GraalVM native image (one exe, no JVM, no jar) on a clean Windows runner from public repositories
 # alone, tests it on a profile nothing has installed into, and leaves the exe as an artifact. It publishes nothing and
 # needs no secrets; it is separate from release.yml, which still builds the jr launchers.
+# Also reports the size (plain and UPX-packed) and uploads GraalVM's build report, which says where the bytes are.
 name: native
 
 on:
   push:
     branches: ['native-**']
   workflow_dispatch:
+    inputs:
+      optimization:
+        description: 'native-image optimization: s (smallest), 2, b (quick)'
+        default: 's'
 
 jobs:
   windows:
@@ -25,7 +30,14 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
       - name: build the native exe
         shell: cmd
-        run: mvn -B -ntp -Pnative -DskipTests package
+        run: mvn -B -ntp -Pnative -DskipTests -Dnative.optimization=${{ github.event.inputs.optimization || 's' }} package
+      - name: size
+        shell: pwsh
+        run: |
+          $mb = { param($f) '{0:N1} MB' -f ((Get-Item $f).Length / 1MB) }
+          $line = "proj.exe: " + (& $mb target/proj.exe)
+          $line
+          "### size`n$line" >> $env:GITHUB_STEP_SUMMARY
       - name: the exe carries its icon and version
         shell: pwsh
         run: |
@@ -44,13 +56,14 @@ jobs:
           $home2 = Join-Path $env:RUNNER_TEMP 'home'
           New-Item -ItemType Directory -Force "$home2\littlejlib\proj", "$env:RUNNER_TEMP\code\acme\billing" | Out-Null
           Set-Content "$env:RUNNER_TEMP\code\acme\billing\pom.xml" '<project><modelVersion>4.0.0</modelVersion><groupId>io.github.acme</groupId><artifactId>acme-billing</artifactId><version>1.0</version></project>'
-          $code = ($env:RUNNER_TEMP -replace '\\','/') + '/code'
+          $code = ($env:RUNNER_TEMP.Replace('\','/')) + '/code'
           Set-Content "$home2\littlejlib\proj\Settings.toml" "codebase.primary = ['$code']`ncodebase.mirror = []`nglobalHotkey = 'off'"
           $h = "-Duser.home=$home2"
           & $exe $h scan; if ($LASTEXITCODE) { throw 'scan' }
           & $exe $h list | Select-String 'acme-billing' | Out-Null; if ($LASTEXITCODE) { throw 'list' }
           & $exe $h prp guide | Select-String 'PRP conventions' | Out-Null; if ($LASTEXITCODE) { throw 'prp guide' }
           & $exe $h config get scanDepth; if ($LASTEXITCODE) { throw 'config' }
+          & $exe $h cct index; if ($LASTEXITCODE) { throw 'cct index' }
           & $exe $h daemon start; if ($LASTEXITCODE) { throw 'daemon start' }
           & $exe $h daemon status; if ($LASTEXITCODE) { throw 'daemon status' }
           & $exe $h list | Select-String 'acme-billing' | Out-Null; if ($LASTEXITCODE) { throw 'list via daemon' }
@@ -64,14 +77,33 @@ jobs:
           call "%GITHUB_WORKSPACE%\proj\target\proj.exe" install < nul || exit /b 1
           "%LOCALAPPDATA%\Programs\proj\proj.exe" prp guide || exit /b 1
           "%LOCALAPPDATA%\Programs\proj\proj.exe" uninstall < nul || exit /b 1
+      - name: UPX-packed variant
+        # UPX shrinks the file but unpacks the whole exe into memory on every start, and unsigned packed exes are
+        # a favourite of antivirus heuristics: measured here, not assumed. Continues on failure: it is a comparison.
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          choco install upx -y --no-progress | Out-Null
+          Copy-Item target/proj.exe target/proj-upx.exe
+          upx --best --lzma target/proj-upx.exe
+          $exe = (Resolve-Path target/proj-upx.exe).Path
+          $plain = (Resolve-Path target/proj.exe).Path
+          $t = { param($e) (Measure-Command { & $e --init powershell | Out-Null }).TotalMilliseconds }
+          $row = 'proj-upx.exe: {0:N1} MB; `--init` start {1:N0} ms (plain exe {2:N0} ms)' -f ((Get-Item $exe).Length / 1MB), (& $t $exe), (& $t $plain)
+          $row
+          "### UPX`n$row" >> $env:GITHUB_STEP_SUMMARY
       - name: checksum
         shell: bash
         run: |
           cp target/proj.exe ../proj.exe
-          (cd .. && sha256sum proj.exe > SHA256SUMS && cat SHA256SUMS)
+          [ -f target/proj-upx.exe ] && cp target/proj-upx.exe ../proj-upx.exe || true
+          cp target/*build-report*.html ../ 2>/dev/null || true
+          (cd .. && sha256sum proj*.exe > SHA256SUMS && cat SHA256SUMS)
       - uses: actions/upload-artifact@v5
         with:
           name: proj-native-windows
           path: |
             proj.exe
+            proj-upx.exe
             SHA256SUMS
+            *build-report*.html

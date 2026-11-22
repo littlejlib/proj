@@ -42,15 +42,24 @@
         <!-- ArcadeDB. Pinned to the same version as jacli (littlejlib-jacli), which
              joins this classpath in phase D; two ArcadeDB versions in one shaded jar
              do not coexist. -->
+        <!-- The embedded engine only. Not arcadedb-server (HTTP, Undertow, Micrometer, Swagger: db/DB opens the
+             databases itself), and without what proj never uses: the JavaScript engine (GraalJS, Truffle), Lucene
+             full-text (no full-text index is created) and vector search (jvector). Each cut shrinks the native exe.
+             Still needed, tried and failed without: spatial4j and antlr4-runtime (the engine will not open a database),
+             jts-core (database backup hangs). -->
+
         <dependency>
             <groupId>com.arcadedb</groupId>
             <artifactId>arcadedb-engine</artifactId>
             <version>${arcadedb.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.arcadedb</groupId>
-            <artifactId>arcadedb-server</artifactId>
-            <version>${arcadedb.version}</version>
+            <exclusions>
+                <exclusion><groupId>org.graalvm.polyglot</groupId><artifactId>js</artifactId></exclusion>
+                <exclusion><groupId>org.graalvm.polyglot</groupId><artifactId>polyglot</artifactId></exclusion>
+                <exclusion><groupId>org.apache.lucene</groupId><artifactId>lucene-analysis-common</artifactId></exclusion>
+                <exclusion><groupId>org.apache.lucene</groupId><artifactId>lucene-queryparser</artifactId></exclusion>
+                <exclusion><groupId>org.apache.lucene</groupId><artifactId>lucene-spatial-extras</artifactId></exclusion>
+                <exclusion><groupId>io.github.jbellis</groupId><artifactId>jvector</artifactId></exclusion>
+            </exclusions>
         </dependency>
 
         <!-- ArcadeDB own consistent backup and restore. The engine carries the SQL BACKUP DATABASE
@@ -290,18 +299,6 @@
                 <native.optimization>2</native.optimization>
             </properties>
             <dependencies>
-                <!-- ArcadeDB's embedded JavaScript (GraalJS and Truffle) is not used here and does not belong in the image -->
-                <dependency>
-                    <groupId>com.arcadedb</groupId>
-                    <artifactId>arcadedb-engine</artifactId>
-                    <version>${arcadedb.version}</version>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>org.graalvm.polyglot</groupId>
-                            <artifactId>js</artifactId>
-                        </exclusion>
-                    </exclusions>
-                </dependency>
                 <dependency>
                     <groupId>org.graalvm.nativeimage</groupId>
                     <artifactId>svm</artifactId>
@@ -426,6 +423,7 @@
                             <buildArgs>
                                 <buildArg>-O${native.optimization}</buildArg>
                                 <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                                <buildArg>--emit=build-report</buildArg>
                                 <buildArg>-march=compatibility</buildArg>
                                 <buildArg>-R:MaxHeapSize=768m</buildArg>
                                 <buildArg>-R:MinHeapSize=16m</buildArg>
