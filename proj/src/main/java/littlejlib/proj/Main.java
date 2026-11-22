@@ -38,6 +38,9 @@ import java.io.IOException;
              littlejlib.proj.cli.AotCommands.AotCmd.class,
              littlejlib.proj.cli.HibCli.class,
              littlejlib.proj.cli.ClaudeCli.class,
+             littlejlib.proj.cli.SelfCli.InstallCmd.class,
+             littlejlib.proj.cli.SelfCli.UpdateCmd.class,
+             littlejlib.proj.cli.SelfCli.UninstallCmd.class,
              Main.HelpCommand.class
          },
          footer = "%nRun 'prj' without arguments to use interactive menu mode.%n")

@@ -1,0 +1,155 @@
+# Builds everything a proj release publishes, from public repositories alone (a clean runner has an
+# empty ~/.m2, so a dependency that exists only on a developer's machine fails here), and tests that the
+# launchers install on a profile nothing has installed into. It publishes nothing and needs no secrets:
+# the last job leaves the gathered release folder as one artifact; whoever releases downloads it,
+# checks it (SHA-256 of every file), and creates the GitHub release from it.
+#
+# Order: windows (proj.exe, its jar, the update file) -> macos-arm64 -> macos-x64, each run merging the
+# update file of the run before, so the last one lists Windows and both Macs under this version.
+name: release
+
+on:
+  push:
+    branches: ['release-**']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: build the release exe and jar (url source: its jar comes from the release)
+        shell: bash
+        run: mvn -B -ntp -DskipTests -Djrexe -Djr.source=url package
+      - name: build an exe that runs the jar just built, for the install test
+        shell: bash
+        run: |
+          mkdir -p ../testexe
+          cp -r target/jr/release ../release-keep
+          mvn -B -ntp -DskipTests -Djrexe package
+          cp target/jr/proj.exe ../testexe/proj.exe
+      - name: install on a fresh profile
+        # A profile nothing has installed into has no %LOCALAPPDATA%\Programs. The runner is throwaway,
+        # so this is a real install: default folder, user PATH.
+        shell: cmd
+        run: |
+          if exist "%LOCALAPPDATA%\Programs" rmdir /s /q "%LOCALAPPDATA%\Programs"
+          call "%GITHUB_WORKSPACE%\testexe\proj.exe" -Xjr:yes install < nul || exit /b 1
+          "%LOCALAPPDATA%\Programs\proj\proj.exe" prp guide || exit /b 1
+      - name: the release folder
+        shell: bash
+        run: |
+          rm -rf target/jr/release && cp -r ../release-keep target/jr/release
+          ls -l target/jr/release
+          test -s target/jr/release/proj.exe
+          test -s target/jr/release/proj.update.json
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-windows
+          path: proj/target/jr/release/*
+    defaults:
+      run:
+        working-directory: proj
+
+  macos-arm64:
+    needs: windows
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: proj
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/download-artifact@v5
+        with:
+          name: release-windows
+          path: prev
+      - name: build the Apple silicon binary and jar
+        run: |
+          mvn -B -ntp -DskipTests -Djrexe -Djr.source=url -Djr.platforms=macos -Djr.macosArchitecture=arm64 \
+            -Djrexe.jarname=proj-mac-aarch64 -Djr.updateMergeFrom="$GITHUB_WORKSPACE/prev/proj.update.json" package
+          ls -l target/jr/release
+          mkdir -p ../release-keep && cp -r target/jr/release/. ../release-keep/
+      - name: install on a fresh profile and run
+        run: |
+          mvn -B -ntp -DskipTests -Djrexe -Djr.platforms=macos -Djr.macosArchitecture=arm64 package
+          find target/jr -maxdepth 2 | head -20
+          BIN=$(find target/jr/macos -maxdepth 1 -type f -name 'proj*' ! -name '*.zip' | head -1)
+          echo "binary: $BIN"; file "$BIN"
+          "$BIN" install
+          export PATH="$HOME/.local/bin:$PATH"
+          proj prp guide | head -5
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-macos-arm64
+          path: release-keep/*
+
+  macos-x64:
+    needs: macos-arm64
+    runs-on: macos-15-intel
+    defaults:
+      run:
+        working-directory: proj
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/download-artifact@v5
+        with:
+          name: release-macos-arm64
+          path: prev
+      - name: build the Intel binary and jar
+        run: |
+          mvn -B -ntp -DskipTests -Djrexe -Djr.source=url -Djr.platforms=macos -Djr.macosArchitecture=x86_64 \
+            -Djrexe.jarname=proj-mac -Djr.updateMergeFrom="$GITHUB_WORKSPACE/prev/proj.update.json" package
+          ls -l target/jr/release
+          mkdir -p ../release-keep && cp -r target/jr/release/. ../release-keep/
+      - name: install on a fresh profile and run
+        run: |
+          mvn -B -ntp -DskipTests -Djrexe -Djr.platforms=macos -Djr.macosArchitecture=x86_64 package
+          BIN=$(find target/jr/macos -maxdepth 1 -type f -name 'proj*' ! -name '*.zip' | head -1)
+          echo "binary: $BIN"; file "$BIN"
+          "$BIN" install
+          export PATH="$HOME/.local/bin:$PATH"
+          proj prp guide | head -5
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-macos-x64
+          path: release-keep/*
+
+  gather:
+    needs: macos-x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: release-*
+          path: parts
+      - name: gather
+        run: |
+          mkdir all
+          # Windows first, then each Mac run over it: every run wrote its own release folder.
+          for d in release-windows release-macos-arm64 release-macos-x64; do cp -rf parts/$d/. all/; done
+          # the last run's update file lists every platform; the update file is not an asset
+          cp parts/release-macos-x64/proj.update.json update-file.json
+          rm -f all/proj.update.json all/SHA256SUMS
+          (cd all && sha256sum * | sort -k2 > ../SHA256SUMS && mv ../SHA256SUMS .)
+          ls -l all; cat all/SHA256SUMS
+      - uses: actions/upload-artifact@v5
+        with:
+          name: proj-release
+          path: |
+            all/*
+            update-file.json

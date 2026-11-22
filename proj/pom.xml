@@ -6,7 +6,7 @@
 
     <groupId>io.github.littlejlib</groupId>
     <artifactId>littlejlib-proj</artifactId>
-    <version>1.0</version>
+    <version>0.2.0</version>
     <packaging>jar</packaging>
     <description>proj - the index of every repository on this machine, and the PRP tool. Maven coordinates, git state, dependency graph and Maven Central status across all configured code bases, with a keyboard-first picker and a resident daemon.</description>
 
@@ -14,6 +14,12 @@
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <main.class>littlejlib.proj.Main</main.class>
+        <!-- The release: jr-maven-plugin bakes these into proj.exe / the macOS binaries (-Djrexe -Djr.source=url).
+             A version with a label (0.3.0-beta.1) goes on the beta channel: -Djrexe.channel=beta. -->
+        <jrexe.release>https://github.com/littlejlib/proj/releases/download/v${project.version}</jrexe.release>
+        <jrexe.updates>https://littlejlib.github.io/proj/update</jrexe.updates>
+        <jrexe.channel>stable</jrexe.channel>
+        <jrexe.jarname>proj-win</jrexe.jarname>
         <exec.mainClass>${main.class}</exec.mainClass>
         <arcadedb.version>26.7.3</arcadedb.version>
         <datahelper.version>1.7</datahelper.version>
@@ -172,6 +178,12 @@
              OBSERVE a key, so anything Windows already uses would have fired twice. RegisterHotKey
              claims the combination instead, and reaches it through FFM - see util/GlobalHotkey. -->
 
+        <!-- proj install / update / uninstall: the downloaded exe puts itself in place and updates itself. -->
+        <dependency>
+            <groupId>io.github.jarrunner</groupId>
+            <artifactId>jr-apputils</artifactId>
+            <version>1.1</version>
+        </dependency>
         <!-- The AOT training route (littlejlib/jr/aot). The mechanism lives there so every jr-launched
              tool shares it; littlejlib.proj.aot.AotWarmup keeps only what is proj-specific. -->
         <dependency>
@@ -282,7 +294,12 @@
                                 <goals><goal>exe</goal></goals>
                                 <configuration>
                                     <name>proj</name>
-                                    <jar>${project.build.directory}/littlejlib-proj-1.0.jar</jar>
+                                    <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
+                                    <appId>io.github.littlejlib:proj</appId>
+                                    <jarUrl>${jrexe.release}/${jrexe.jarname}-{sha8}.jar</jarUrl>
+                                    <updateUrl>${jrexe.updates}/proj.json</updateUrl>
+                                    <updateChannel>${jrexe.channel}</updateChannel>
+                                    <fileDescription>proj</fileDescription>
                                     <jvmMode>dll</jvmMode>
                                     <aot>true</aot>
                                     <vmArgs><vmArg>--enable-native-access=ALL-UNNAMED</vmArg><vmArg>--add-opens</vmArg><vmArg>java.base/sun.nio.ch=ALL-UNNAMED</vmArg><vmArg>--add-opens</vmArg><vmArg>java.base/java.nio.channels.spi=ALL-UNNAMED</vmArg><vmArg>--add-exports</vmArg><vmArg>jdk.unsupported/sun.misc=ALL-UNNAMED</vmArg><vmArg>--sun-misc-unsafe-memory-access=allow</vmArg><vmArg>-Xlog:aot*=off</vmArg><vmArg>-XX:+DisplayVMOutputToStderr</vmArg><vmArg>-XX:+UseSerialGC</vmArg></vmArgs>
