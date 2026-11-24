@@ -1,8 +1,8 @@
 package littlejlib.proj.cct.model;
 
-import datapotter.arcadedbhelper.*;
+import datapotter.datahelper.Data;
 
-@ArcadeData
+@Data
 public final class SessionDoc extends SessionDoc_A {
 
     String sessionId;
@@ -47,11 +47,4 @@ public final class SessionDoc extends SessionDoc_A {
     Long indexedSize;
     Long indexedMtime;
 
-    public static final TypeDef<SessionDoc> TYPEDEF =
-        schemaBuilder()
-            .factory(SessionDoc::new)
-            .unique($sessionId)
-            .lsmIndex($projectEncoded)
-            .lsmIndex($lastActivity)
-            .__();
 }

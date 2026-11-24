@@ -1,7 +1,6 @@
 package littlejlib.proj.workspace;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,7 +8,7 @@ import java.nio.file.Paths;
 /**
  * One folder of a PLAIN group, one row.
  */
-@ArcadeData
+@Data
 public final class WorkspaceRecord extends WorkspaceRecord_A {
 
     String path;            // absolute, and the identity of the row
@@ -31,14 +30,6 @@ public final class WorkspaceRecord extends WorkspaceRecord_A {
     Long lastScanned;
     Long lastActivity;      // newest mtime in the prp folder - "when did I last work on this"
 
-    public static final TypeDef<WorkspaceRecord> TYPEDEF =
-            schemaBuilder()
-                    .factory(WorkspaceRecord::new)
-                    .unique($path)
-                    .lsmIndex($base)
-                    .lsmIndex($groupSlug)
-                    .lsmIndex($parentPath)
-                    .__();
 
     public Path dir() {
         return path == null || path.isBlank() ? null : Paths.get(path);

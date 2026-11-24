@@ -6,9 +6,7 @@ import module java.base;
  * Where the claude-code store is, and where this half of proj keeps its own files.
  * <p>
  * The app home moved here from {@code ~/xyz-jphil/ccsearchconv} when this became part of proj: one
- * organisation, one project, one settings folder. The INDEX is not under here at all any more - it
- * is a database inside the ArcadeDB server proj already runs, which is what stopped the window and
- * the command line locking each other out.
+ * organisation, one project, one settings folder. The INDEX is under proj's cache folder (cct/db/Db).
  */
 public final class StorePaths {
 

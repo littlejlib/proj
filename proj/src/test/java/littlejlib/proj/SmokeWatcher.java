@@ -1,6 +1,5 @@
 package littlejlib.proj;
 
-import littlejlib.proj.db.DB;
 import littlejlib.proj.scanner.ProjectStore;
 import littlejlib.proj.scanner.ProjectTreeScanner;
 import littlejlib.proj.scanner.ProjectWatcher;
@@ -67,7 +66,6 @@ public class SmokeWatcher {
 
         watcher.stop();
         deleteTree(root);
-        DB.get().shutdown();
         System.exit(0);
     }
 

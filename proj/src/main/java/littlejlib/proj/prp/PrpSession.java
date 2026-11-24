@@ -1,7 +1,6 @@
 package littlejlib.proj.prp;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,7 +14,7 @@ import java.nio.file.Paths;
  * project half of a name is the project half of the last name used anywhere in that project. Both
  * fall out of these rows, so "set it once" needs no second place to look.
  */
-@ArcadeData
+@Data
 public final class PrpSession extends PrpSession_A {
 
     String sessionId;       // the uuid handed to claude-code, and the identity of the row
@@ -26,13 +25,6 @@ public final class PrpSession extends PrpSession_A {
     Long startedAt;
     String exe;             // the explicit program it ran on (fclaude ...); null when it was the default
 
-    public static final TypeDef<PrpSession> TYPEDEF =
-            schemaBuilder()
-                    .factory(PrpSession::new)
-                    .unique($sessionId)
-                    .lsmIndex($prpFile)
-                    .lsmIndex($projectPath)
-                    .__();
 
     public Path prp() {
         return prpFile == null || prpFile.isBlank() ? null : Paths.get(prpFile);

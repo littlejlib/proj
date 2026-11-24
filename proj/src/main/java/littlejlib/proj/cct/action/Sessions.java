@@ -2,36 +2,34 @@ package littlejlib.proj.cct.action;
 
 import module java.base;
 
-import com.arcadedb.database.Database;
+import littlejlib.proj.cct.db.Db;
 import littlejlib.proj.cct.model.SessionDoc;
 
-import static datapotter.arcadedbhelper.Query.query;
-import static littlejlib.proj.cct.model.SessionDoc_A.$sessionId;
 
 public final class Sessions {
 
     private Sessions() {}
 
-    public static SessionDoc exact(Database db, String sessionId) {
-        return query(db, SessionDoc.TYPEDEF).eq($sessionId, sessionId).firstOrNull();
+    public static SessionDoc exact(Db db, String sessionId) {
+        return db.sessions().first(s -> Objects.equals(sessionId, s.sessionId()));
     }
 
-    public static List<SessionDoc> byPrefix(Database db, String prefix) {
+    public static List<SessionDoc> byPrefix(Db db, String prefix) {
         var exact = exact(db, prefix);
         if (exact != null) return List.of(exact);
         var p = prefix == null ? "" : prefix.toLowerCase(Locale.ROOT);
         if (p.isEmpty()) return List.of();
         var out = new ArrayList<SessionDoc>();
-        for (var s : query(db, SessionDoc.TYPEDEF)) {
+        for (var s : db.sessions().all()) {
             var id = s.sessionId();
             if (id != null && id.toLowerCase(Locale.ROOT).startsWith(p)) out.add(s);
         }
         return out;
     }
 
-    public static List<SessionDoc> all(Database db) {
+    public static List<SessionDoc> all(Db db) {
         var out = new ArrayList<SessionDoc>();
-        for (var s : query(db, SessionDoc.TYPEDEF)) out.add(s);
+        for (var s : db.sessions().all()) out.add(s);
         return out;
     }
 }

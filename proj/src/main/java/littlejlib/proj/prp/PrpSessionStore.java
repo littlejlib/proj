@@ -1,32 +1,30 @@
 package littlejlib.proj.prp;
 
-import com.arcadedb.database.Database;
-import littlejlib.proj.db.DB;
+import littlejlib.proj.store.Tables;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
-
-import static littlejlib.proj.prp.PrpSession_A.*;
-import static datapotter.arcadedbhelper.Query.query;
-import static datapotter.arcadedbhelper.Upsert.upsert;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
- * Reads and writes {@link PrpSession} rows. Opens the database in THIS process, so it is only for a
- * process that may do that - see {@link PrpSessions}, which decides.
+ * Reads and writes {@link PrpSession} rows: a file in proj's data folder, which any process may use.
  */
 public class PrpSessionStore {
-
-    Database db() {
-        return DB.get().getDatabase();
-    }
 
     static String abs(Path p) {
         return p == null ? null : p.toAbsolutePath().normalize().toString();
     }
 
+    static List<PrpSession> newestFirst(List<PrpSession> rows) {
+        return rows.stream().sorted(Comparator.comparingLong(
+                (PrpSession s) -> s.startedAt() == null ? 0L : s.startedAt()).reversed()).toList();
+    }
+
     public List<PrpSession> of(Path prpFile) {
-        return query(db(), PrpSession.TYPEDEF).eq($prpFile, abs(prpFile))
-                .orderByDesc($startedAt).list();
+        var file = abs(prpFile);
+        return newestFirst(Tables.prpSessions().where(s -> Objects.equals(file, s.prpFile())));
     }
 
     public PrpSession latestOf(Path prpFile) {
@@ -36,32 +34,26 @@ public class PrpSessionStore {
 
     /** The newest session anywhere in this project, whichever PRP it was on. */
     public PrpSession latestInProject(Path projectDir) {
-        var all = query(db(), PrpSession.TYPEDEF).eq($projectPath, abs(projectDir))
-                .orderByDesc($startedAt).list();
+        var dir = abs(projectDir);
+        var all = newestFirst(Tables.prpSessions().where(s -> Objects.equals(dir, s.projectPath())));
         return all.isEmpty() ? null : all.get(0);
     }
 
     public PrpSession byId(String sessionId) {
-        return query(db(), PrpSession.TYPEDEF).eq($sessionId, sessionId).firstOrNull();
+        return Tables.prpSessions().first(s -> Objects.equals(sessionId, s.sessionId()));
     }
 
     /** Every row whose PRP file sits directly in this folder. */
     public List<PrpSession> inFolder(Path prpDir) {
         var dir = prpDir.toAbsolutePath().normalize();
-        return query(db(), PrpSession.TYPEDEF).list().stream()
+        return Tables.prpSessions().all().stream()
                 .filter(s -> s.prp() != null && dir.equals(s.prp().toAbsolutePath().normalize().getParent())).toList();
     }
 
     /** Points an existing row at a renumbered PRP; false when there is no such row. */
     public boolean repoint(String sessionId, Path prpFile, String prpIndex, String tabName) {
         if (byId(sessionId) == null) return false;
-        var db = db();
-        db.transaction(() -> upsert(db, PrpSession.TYPEDEF)
-                .key($sessionId, sessionId)
-                .set($prpFile, abs(prpFile))
-                .set($prpIndex, prpIndex)
-                .set($tabName, tabName)
-                .save());
+        upsert(sessionId, s -> s.prpFile(abs(prpFile)).prpIndex(prpIndex).tabName(tabName));
         return true;
     }
 
@@ -72,16 +64,16 @@ public class PrpSessionStore {
 
     public void record(String sessionId, Path prpFile, String prpIndex, Path projectDir,
                        String tabName, long startedAt, String exe) {
-        var db = db();
-        db.transaction(() -> upsert(db, PrpSession.TYPEDEF)
-                .key($sessionId, sessionId)
-                .set($prpFile, abs(prpFile))
-                .set($prpIndex, prpIndex)
-                .set($projectPath, abs(projectDir))
-                .set($tabName, tabName)
-                .set($startedAt, startedAt)
-                .set($exe, exe == null || exe.isBlank() ? null : exe.trim())
-                .save());
+        upsert(sessionId, s -> s.prpFile(abs(prpFile)).prpIndex(prpIndex).projectPath(abs(projectDir))
+                .tabName(tabName).startedAt(startedAt).exe(exe == null || exe.isBlank() ? null : exe.trim()));
+    }
+
+    static void upsert(String sessionId, Consumer<PrpSession> change) {
+        Tables.prpSessions().update(rows -> {
+            var row = rows.stream().filter(s -> Objects.equals(sessionId, s.sessionId())).findFirst().orElse(null);
+            if (row == null) rows.add(row = new PrpSession().sessionId(sessionId));
+            change.accept(row);
+        });
     }
 
     /** A remembered tab name with today's project name in front, so renaming the project reaches old PRPs. */

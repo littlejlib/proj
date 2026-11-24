@@ -34,7 +34,7 @@ public final class AotWarmup {
      */
     static jarrunner.aot.AotWarmup config(PrintStream log) {
         return jarrunner.aot.AotWarmup.packages(
-                        "littlejlib/proj/", "picocli/", "com/arcadedb/",
+                        "littlejlib/proj/", "picocli/",
                         "javafx/", "com/sun/javafx/", "com/google/gson/",
                         "com/fasterxml/jackson/", "xyz/jphil/")
                 .maxClasses(12_000)

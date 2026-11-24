@@ -1,14 +1,31 @@
 {
   "resources": [
-    { "glob": "littlejlib/proj/**/*.png" },
-    { "glob": "littlejlib/proj/**/*.css" },
-    { "glob": "claude/*" },
-    { "glob": "prp-guide/*" },
-    { "glob": "prp-names/*" },
-    { "glob": "prp-templates/*" },
-    { "glob": "shell-init/*" },
-    { "glob": "arcadedb-log.properties" },
-    { "glob": "logging.properties" },
-    { "glob": "native-app.properties" }
+    {
+      "glob": "littlejlib/proj/**/*.png"
+    },
+    {
+      "glob": "littlejlib/proj/**/*.css"
+    },
+    {
+      "glob": "claude/*"
+    },
+    {
+      "glob": "prp-guide/*"
+    },
+    {
+      "glob": "prp-names/*"
+    },
+    {
+      "glob": "prp-templates/*"
+    },
+    {
+      "glob": "shell-init/*"
+    },
+    {
+      "glob": "logging.properties"
+    },
+    {
+      "glob": "native-app.properties"
+    }
   ]
 }

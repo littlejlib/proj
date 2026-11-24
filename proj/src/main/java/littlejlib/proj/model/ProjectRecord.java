@@ -1,7 +1,6 @@
 package littlejlib.proj.model;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,7 +16,7 @@ import java.nio.file.Paths;
  * The tree is not stored as nesting either: {@code parentPath} carries the structure and the view
  * rebuilds it into {@code TreeItem}s, which is where a tree belongs at display time.
  */
-@ArcadeData
+@Data
 public final class ProjectRecord extends ProjectRecord_A {
 
     String path;            // absolute, and the identity of the row
@@ -53,14 +52,6 @@ public final class ProjectRecord extends ProjectRecord_A {
     Long lastScanned;
     Long lastModified;      // directory mtime, so "recently worked on" can be an ordering
 
-    public static final TypeDef<ProjectRecord> TYPEDEF =
-            schemaBuilder()
-                    .factory(ProjectRecord::new)
-                    .unique($path)
-                    .lsmIndex($codeDir)
-                    .lsmIndex($parentPath)
-                    .lsmIndex($baseType)
-                    .__();
 
     public boolean isSecondaryBase() {
         return !"PRIMARY".equalsIgnoreCase(baseType);

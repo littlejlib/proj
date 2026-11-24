@@ -1,7 +1,6 @@
 package littlejlib.proj.model;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 /**
  * One {@code <dependency>} of one project, flat, one row.
@@ -17,7 +16,7 @@ import datapotter.arcadedbhelper.TypeDef;
  * unresolved rather than filled in with a guess. A guessed version would produce a confident wrong
  * answer from the Maven Central lookup, which is worse than no answer.
  */
-@ArcadeData
+@Data
 public final class ProjectDependency extends ProjectDependency_A {
 
     String path;            // the project directory that declares this dependency
@@ -29,12 +28,6 @@ public final class ProjectDependency extends ProjectDependency_A {
     boolean optional;
     boolean managed;        // the version came from a dependencyManagement section, not the tag itself
 
-    public static final TypeDef<ProjectDependency> TYPEDEF =
-            schemaBuilder()
-                    .factory(ProjectDependency::new)
-                    .lsmIndex($path)
-                    .lsmIndex($ga)
-                    .__();
 
     public static String ga(String groupId, String artifactId) {
         return nz(groupId) + ":" + nz(artifactId);

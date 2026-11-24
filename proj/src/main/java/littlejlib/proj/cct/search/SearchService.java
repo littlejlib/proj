@@ -2,20 +2,17 @@ package littlejlib.proj.cct.search;
 
 import module java.base;
 
-import com.arcadedb.database.Database;
+import littlejlib.proj.cct.db.Db;
 import littlejlib.proj.cct.model.*;
 import littlejlib.proj.cct.store.Layer;
 
-import static datapotter.arcadedbhelper.Query.query;
 import static littlejlib.proj.cct.Num.*;
-import static littlejlib.proj.cct.model.SessionDoc_A.$sessionId;
-import static littlejlib.proj.cct.model.TurnDoc_A.*;
 
 public final class SearchService {
 
-    private final Database db;
+    private final Db db;
 
-    public SearchService(Database db) { this.db = db; }
+    public SearchService(Db db) { this.db = db; }
 
     public List<SearchHit> find(SearchQuery q) {
         var terms = q.terms();
@@ -31,30 +28,29 @@ public final class SearchService {
 
     public List<SearchHit> recent(SearchQuery q) {
         var out = new ArrayList<SearchHit>();
-        for (var s : query(db, SessionDoc.TYPEDEF)) if (Filters.passes(s, q)) out.add(new SearchHit(s));
+        for (var s : db.sessions().all()) if (Filters.passes(s, q)) out.add(new SearchHit(s));
         out.sort(Comparator.comparingLong(h -> -n(h.session.lastActivity())));
         return out.size() > q.limit() ? new ArrayList<>(out.subList(0, q.limit())) : out;
     }
 
     public SessionDoc session(String sessionId) {
-        return query(db, SessionDoc.TYPEDEF).eq($sessionId, sessionId).firstOrNull();
+        return db.sessions().first(s -> Objects.equals(sessionId, s.sessionId()));
     }
 
     public List<TurnDoc> turns(String sessionId, int widestLayer) {
         var out = new ArrayList<TurnDoc>();
-        for (var t : query(db, TurnDoc.TYPEDEF).eq(TurnDoc_A.$sessionId, sessionId)
-                .le($layer, widestLayer).orderByAsc($seq)) out.add(t);
+        for (var t : db.turns().of(sessionId)) if (n(t.layer()) <= widestLayer) out.add(t);
         return out;
     }
 
     private void matchTurns(SearchQuery q, Terms terms, Map<String, SearchHit> hits) {
         var widest = Math.max(1, Math.min(Layer.TOOLS.depth, q.layer()));
-        for (var t : query(db, TurnDoc.TYPEDEF).le($layer, widest).ilike($text, terms.sqlPrefilter())) {
-            if (!terms.matches(t.text())) continue;
+        db.turns().scan(terms::mightMatchJson, t -> {
+            if (n(t.layer()) > widest || !terms.matches(t.text())) return;
             var hit = hits.computeIfAbsent(t.sessionId(), this::hitFor);
-            if (hit == null) { hits.remove(t.sessionId()); continue; }
+            if (hit == null) { hits.remove(t.sessionId()); return; }
             count(hit, t, terms);
-        }
+        });
     }
 
     private SearchHit hitFor(String sessionId) {
@@ -78,7 +74,7 @@ public final class SearchService {
     }
 
     private void matchSessions(SearchQuery q, Terms terms, Map<String, SearchHit> hits) {
-        for (var s : query(db, SessionDoc.TYPEDEF)) {
+        for (var s : db.sessions().all()) {
             var cwd = terms.matches(s.cwd()) || terms.matches(s.projectEncoded());
             var title = terms.matches(s.aiTitle());
             var prompt = terms.matches(s.firstHumanPrompt()) || terms.matches(s.lastPrompt());

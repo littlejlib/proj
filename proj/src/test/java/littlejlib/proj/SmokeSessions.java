@@ -1,6 +1,5 @@
 package littlejlib.proj;
 
-import littlejlib.proj.db.DB;
 import littlejlib.proj.prp.PrpSessions;
 
 import java.nio.file.Path;
@@ -16,8 +15,6 @@ public class SmokeSessions {
     public static void main(String[] args) {
         var prpFile = Path.of(args[0]).toAbsolutePath().normalize();
         var project = littlejlib.proj.prp.AgentLauncher.projectRootOf(prpFile);
-
-        System.out.println("db open here  " + DB.isOpen() + "   (false means the daemon must answer)");
         try {
             var raw = littlejlib.proj.daemon.Client.send(
                     java.util.List.of("query", "prp-session", "list", prpFile.toString()),

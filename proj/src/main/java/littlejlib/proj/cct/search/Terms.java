@@ -39,8 +39,15 @@ public final class Terms {
         return best;
     }
 
-    public String sqlPrefilter() {
-        return "%" + longest().replace('%', '_') + "%";
+    /** A cheap check on a turn's raw JSON line before it is parsed: false only when it cannot match. */
+    public boolean mightMatchJson(String line) {
+        var t = longest();
+        if (t.isEmpty()) return true;
+        for (var i = 0; i < t.length(); i++) {
+            var c = t.charAt(i);
+            if (c == '"' || c == '\\' || c < 0x20 || c == ' ' || c == ' ') return true; // escaped in JSON
+        }
+        return line.toLowerCase(Locale.ROOT).contains(t.toLowerCase(Locale.ROOT));
     }
 
     public boolean matches(String text) {

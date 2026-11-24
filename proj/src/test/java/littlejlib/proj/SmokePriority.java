@@ -1,6 +1,5 @@
 package littlejlib.proj;
 
-import littlejlib.proj.db.DB;
 import littlejlib.proj.model.ProjectRecord;
 import littlejlib.proj.scanner.ProjectStore;
 import littlejlib.proj.ui.ProjectFilter;
@@ -71,8 +70,6 @@ public class SmokePriority {
             System.out.println("\nusage on " + target.name() + ": now " + after.openCount()
                     + ", after a scan-shaped write still " + survived.openCount());
         }
-
-        DB.get().shutdown();
         System.exit(0);
     }
 

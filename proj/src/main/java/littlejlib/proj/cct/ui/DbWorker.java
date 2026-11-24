@@ -2,7 +2,6 @@ package littlejlib.proj.cct.ui;
 
 import module java.base;
 
-import com.arcadedb.database.Database;
 import javafx.application.Platform;
 import littlejlib.proj.cct.db.Db;
 import littlejlib.proj.cct.search.SearchService;
@@ -47,7 +46,7 @@ public final class DbWorker {
 
     public SearchService search() { return svc; }
 
-    public Database database() { return handle == null ? null : handle.db(); }
+    public Db database() { return handle == null ? null : handle.db(); }
 
     public void release() {
         pool.submit(() -> {

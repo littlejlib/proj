@@ -1,20 +1,12 @@
 package littlejlib.proj.prp;
 
-import com.arcadedb.database.Database;
-import littlejlib.proj.db.DB;
+import littlejlib.proj.store.Tables;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
-import static littlejlib.proj.prp.ProjectKey_A.*;
-import static datapotter.arcadedbhelper.Query.query;
-import static datapotter.arcadedbhelper.Upsert.upsert;
-
-/** Reads and writes {@link ProjectKey} rows. Opens the database here - see {@link PrpSessions}. */
+/** Reads and writes {@link ProjectKey} rows: a file in proj's data folder. */
 public class ProjectKeyStore {
-
-    Database db() {
-        return DB.get().getDatabase();
-    }
 
     static String abs(Path p) {
         return p == null ? null : p.toAbsolutePath().normalize().toString();
@@ -22,25 +14,26 @@ public class ProjectKeyStore {
 
     /** The key set for this project, or null. */
     public String of(Path project) {
-        var row = query(db(), ProjectKey.TYPEDEF).eq($path, abs(project)).firstOrNull();
+        var me = abs(project);
+        var row = Tables.projectKeys().first(k -> Objects.equals(me, k.path()));
         return row == null || row.key() == null || row.key().isBlank() ? null : row.key();
     }
 
     /** Another existing folder that holds this key, or null. Rows of folders that moved are skipped. */
     public String ownerOf(String key, Path project) {
         var me = abs(project);
-        return query(db(), ProjectKey.TYPEDEF).eq($key, key).list().stream()
+        return Tables.projectKeys().where(k -> Objects.equals(key, k.key())).stream()
                 .map(ProjectKey::path)
                 .filter(p -> p != null && !p.equals(me) && java.nio.file.Files.isDirectory(Path.of(p)))
                 .findFirst().orElse(null);
     }
 
     public void set(Path project, String key) {
-        var db = db();
-        db.transaction(() -> upsert(db, ProjectKey.TYPEDEF)
-                .key($path, abs(project))
-                .set($key, key)
-                .set($updatedAt, System.currentTimeMillis())
-                .save());
+        var me = abs(project);
+        Tables.projectKeys().update(rows -> {
+            var row = rows.stream().filter(k -> Objects.equals(me, k.path())).findFirst().orElse(null);
+            if (row == null) rows.add(row = new ProjectKey().path(me));
+            row.key(key).updatedAt(System.currentTimeMillis());
+        });
     }
 }

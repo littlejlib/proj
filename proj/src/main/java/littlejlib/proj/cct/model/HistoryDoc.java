@@ -1,8 +1,8 @@
 package littlejlib.proj.cct.model;
 
-import datapotter.arcadedbhelper.*;
+import datapotter.datahelper.Data;
 
-@ArcadeData
+@Data
 public final class HistoryDoc extends HistoryDoc_A {
 
     String historyKey;
@@ -11,11 +11,4 @@ public final class HistoryDoc extends HistoryDoc_A {
     String display;
     Long timestamp;
 
-    public static final TypeDef<HistoryDoc> TYPEDEF =
-        schemaBuilder()
-            .factory(HistoryDoc::new)
-            .unique($historyKey)
-            .lsmIndex($sessionId)
-            .lsmIndex($timestamp)
-            .__();
 }

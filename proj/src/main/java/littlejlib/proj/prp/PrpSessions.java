@@ -1,19 +1,13 @@
 package littlejlib.proj.prp;
 
 import littlejlib.proj.track.Timeline;
-import littlejlib.proj.daemon.Client;
-import littlejlib.proj.db.DB;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The one way to reach {@link PrpSession} rows, wherever the caller happens to be running.
- * <p>
- * ArcadeDB's lock is exclusive and the daemon normally holds it, so where the data lives depends on
- * who is asking. Already holding it open - the picker, the daemon - read it directly. Otherwise ask
- * the daemon, exactly as {@code proj list} does. Only with no daemon at all is it opened here.
+ * The one way to reach {@link PrpSession} rows. They are a file in proj's data folder that any
+ * process reads and writes directly, so there is no daemon to ask and no lock to wait for.
  * <p>
  * Every path degrades to a derived name and an empty list rather than failing: a launch must not be
  * stopped by not knowing what to call a tab.
@@ -22,36 +16,24 @@ public final class PrpSessions {
 
     private PrpSessions() { }
 
-    static final String VERB = "prp-session";
-
     public static String tabName(Path prpFile) {
         // The PRP's own short name (front matter, PRP 001R) names a new tab; a name remembered from an earlier
         // launch is only the fallback for a file without one. Resuming a session keeps that session's own tab.
         if (PrpHeader.shortNameOf(prpFile) != null) return TabName.derive(prpFile, key(AgentLauncher.projectRootOf(prpFile)));
-        if (DB.isOpen()) return quiet(() -> new PrpSessionStore().tabName(prpFile),
-                TabName.of(prpFile, null));
-        if (daemonRunning()) {
-            var answer = ask("name", abs(prpFile));
-            return answer == null || answer.isBlank() ? TabName.of(prpFile, null) : answer.strip();
-        }
         return quiet(() -> new PrpSessionStore().tabName(prpFile), TabName.of(prpFile, null));
     }
 
     /**
      * The project's key - the {@code billing} of {@code billing-38}. Null when none is set. The name in
-     * {@code prp/proj.json} wins; the index row is what projects had before that file existed.
+     * {@code prp/proj.json} wins; the stored row is what projects had before that file existed.
      */
     public static String key(Path project) {
         var named = ProjFile.nameOf(project);
         return named != null ? named : dbKey(project);
     }
 
+    /** The stored key alone, ignoring {@code prp/proj.json}. */
     static String dbKey(Path project) {
-        if (DB.isOpen()) return quiet(() -> new ProjectKeyStore().of(project), null);
-        if (daemonRunning()) {
-            var answer = ask("key", abs(project));
-            return answer == null || answer.isBlank() ? null : answer.strip();
-        }
         return quiet(() -> new ProjectKeyStore().of(project), null);
     }
 
@@ -62,16 +44,10 @@ public final class PrpSessions {
         ProjFile.update(project, p -> p.name(clean));
     }
 
-    /** Keeps the index's copy of the name in step with the file, so clashes can be found. */
+    /** Keeps the stored copy of the name in step with the file, so clashes can be found. */
     static void cacheKey(Path project, String key) {
         if (key == null || key.isBlank()) return;
-        if (DB.isOpen()) {
-            quiet(() -> {
-                new ProjectKeyStore().set(project, key);
-                return null;
-            }, null);
-        } else if (daemonRunning()) ask("set-key", abs(project), key);
-        else quiet(() -> {
+        quiet(() -> {
             new ProjectKeyStore().set(project, key);
             return null;
         }, null);
@@ -79,39 +55,20 @@ public final class PrpSessions {
 
     /** Another project that already uses this name, or null. Only projects seen so far are known. */
     public static String keyOwner(String key, Path project) {
-        if (DB.isOpen()) return quiet(() -> new ProjectKeyStore().ownerOf(key, project), null);
-        if (daemonRunning()) {
-            var answer = ask("key-owner", key, abs(project));
-            return answer == null || answer.isBlank() ? null : answer.strip();
-        }
         return quiet(() -> new ProjectKeyStore().ownerOf(key, project), null);
     }
 
     public static List<PrpSession> of(Path prpFile) {
-        if (DB.isOpen()) return quiet(() -> new PrpSessionStore().of(prpFile), List.of());
-        if (daemonRunning()) {
-            var answer = ask("list", abs(prpFile));
-            return answer == null ? List.of() : parse(answer);
-        }
         return quiet(() -> new PrpSessionStore().of(prpFile), List.of());
     }
 
-    /**
-     * Every recorded session whose PRP file sits in this folder (for the renumber migration).
-     * Null when the rows could not be read (an older daemon does not know the verb): empty must mean none.
-     */
+    /** Every recorded session whose PRP file sits in this folder (for the renumber migration); null when unreadable. */
     public static List<PrpSession> inFolder(Path prpDir) {
-        if (!DB.isOpen() && daemonRunning()) {
-            var answer = ask("in-folder", abs(prpDir));
-            return answer == null ? null : parse(answer);
-        }
         return quiet(() -> new PrpSessionStore().inFolder(prpDir), null);
     }
 
     /** Points a row at a renumbered PRP; true when the row was found and changed. */
     public static boolean repoint(String sessionId, Path prpFile, String prpIndex, String tabName) {
-        if (!DB.isOpen() && daemonRunning())
-            return "ok".equals(String.valueOf(ask("repoint", sessionId, abs(prpFile), nz(prpIndex), nz(tabName))).strip());
         return quiet(() -> new PrpSessionStore().repoint(sessionId, prpFile, prpIndex, tabName), false);
     }
 
@@ -154,17 +111,6 @@ public final class PrpSessions {
         noteStart(sessionId, prpFile, prpIndex, tabName);
         PrpHead.onWork(prpFile, "start");           // a session started or resumed on it: a key moment for the head (PRP 001R)
         var stamp = System.currentTimeMillis();
-        if (DB.isOpen()) {
-            quiet(() -> {
-                new PrpSessionStore().record(sessionId, prpFile, prpIndex, project, tabName, stamp, exe);
-                return null;
-            }, null);
-            return;
-        }
-        if (daemonRunning()) {
-            ask("record", sessionId, abs(prpFile), nz(prpIndex), abs(project), nz(tabName), nz(exe));
-            return;
-        }
         quiet(() -> {
             new PrpSessionStore().record(sessionId, prpFile, prpIndex, project, tabName, stamp, exe);
             return null;
@@ -174,52 +120,6 @@ public final class PrpSessions {
     static void learnKey(Path project, String prpIndex, String tabName) {
         var part = TabName.projectPartOf(tabName, prpIndex);
         if (part != null && !part.isBlank()) setKey(project, part);
-    }
-
-    /**
-     * THE LOCK IS EXCLUSIVE, so a daemon that is running is the only route there is. Opening the
-     * database here as a "fallback" does not fail - it BLOCKS, which is how a launch came to hang
-     * instead of falling back.
-     */
-    static boolean daemonRunning() {
-        try {
-            return Client.ping() != null;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /** The daemon's answer, or null when it did not understand. */
-    static String ask(String... args) {
-        try {
-            var full = new ArrayList<String>(List.of("query", VERB));
-            full.addAll(List.of(args));
-            var reply = Client.send(full, false, m -> { });
-            return reply == null || reply.exitCode != 0 ? null : reply.stdout;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /** Columns: sessionId, tabName, startedAt, prpIndex, projectPath, exe, prpFile - see {@code cli/PrpSessionCmd}. */
-    static List<PrpSession> parse(String tsv) {
-        var out = new ArrayList<PrpSession>();
-        for (var line : tsv.split("\n")) {
-            var f = line.strip().split("\t", -1);
-            if (f.length < 5 || f[0].isBlank()) continue;
-            var row = new PrpSession();
-            row.sessionId(f[0]).tabName(f[1]).prpIndex(f[3]).projectPath(f[4]);
-            // a daemon from before the column existed sends five fields
-            if (f.length > 5 && !f[5].isBlank()) row.exe(f[5]);
-            if (f.length > 6 && !f[6].isBlank()) row.prpFile(f[6]);
-            try {
-                row.startedAt(Long.parseLong(f[2]));
-            } catch (NumberFormatException e) {
-                row.startedAt(0L);
-            }
-            out.add(row);
-        }
-        return out;
     }
 
     /**
@@ -234,13 +134,5 @@ public final class PrpSessions {
             System.err.println("[PrpSessions] " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return fallback;
         }
-    }
-
-    static String abs(Path p) {
-        return p == null ? "" : p.toAbsolutePath().normalize().toString();
-    }
-
-    static String nz(String s) {
-        return s == null ? "" : s;
     }
 }

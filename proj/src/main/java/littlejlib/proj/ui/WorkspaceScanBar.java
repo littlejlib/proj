@@ -113,21 +113,9 @@ public final class WorkspaceScanBar {
         if (!busy) showStamp();
     }
 
-    /**
-     * The stamp costs a database read, and {@code DB.get()} OPENS the store in this process rather
-     * than asking the daemon - so where it is not already open, doing that on the FX thread is
-     * either a wait or a lock exception, during the layout of a pane. Where it IS open the read is
-     * one indexed lookup and going off-thread would only make the stamp arrive late.
-     */
+    /** The stamp is one read of an in-memory table, cheap enough for the FX thread. */
     void showStamp() {
-        if (littlejlib.proj.db.DB.isOpen()) {
-            paintStamp(WorkspaceRefresh.lastScanned(group));
-            return;
-        }
-        new Thread(() -> {
-            var last = WorkspaceRefresh.lastScanned(group);
-            Platform.runLater(() -> paintStamp(last));
-        }, "Workspace-Stamp-" + group.slug()).start();
+        paintStamp(WorkspaceRefresh.lastScanned(group));
     }
 
     void paintStamp(long last) {

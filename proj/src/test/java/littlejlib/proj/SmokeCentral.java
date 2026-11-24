@@ -1,7 +1,6 @@
 package littlejlib.proj;
 
 import littlejlib.proj.central.CentralChecker;
-import littlejlib.proj.db.DB;
 
 import java.util.List;
 
@@ -43,7 +42,6 @@ public class SmokeCentral {
         System.out.println("  " + (System.nanoTime() - t0) / 1000 + " microseconds for " + COORDS.size() + " lookups");
 
         checker.shutdown();
-        DB.get().shutdown();
         System.exit(0);
     }
 }

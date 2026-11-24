@@ -1,91 +1,83 @@
 package littlejlib.proj.workspace;
 
-import com.arcadedb.database.Database;
-import littlejlib.proj.db.DB;
+import littlejlib.proj.store.Tables;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
-
-import static littlejlib.proj.workspace.WorkspaceRecord_A.*;
-import static datapotter.arcadedbhelper.Query.query;
-import static datapotter.arcadedbhelper.Upsert.upsert;
+import java.util.Objects;
 
 /**
  * Reads and writes {@link WorkspaceRecord} rows.
  */
 public class WorkspaceStore {
 
-    Database db() {
-        return DB.get().getDatabase();
-    }
-
     static String abs(Path p) {
         return p.toAbsolutePath().toString();
     }
 
-    static final datapotter.datahelper.Field_I<WorkspaceRecord, ?>[] SCANNED =
-            new datapotter.datahelper.Field_I[]{
-                    $path, $parentPath, $base, $groupSlug, $name, $relativePath, $depth,
-                    $hasPrp, $dated, $container, $prpCount, $lastScanned, $lastActivity};
+    static final Comparator<WorkspaceRecord> BY_RELATIVE =
+            Comparator.comparing(r -> r.relativePath() == null ? "" : r.relativePath());
 
     public List<WorkspaceRecord> load(Path base) {
-        return query(db(), WorkspaceRecord.TYPEDEF).eq($base, abs(base)).orderByAsc($relativePath).list();
+        var b = abs(base);
+        return Tables.workspaces().all().stream().filter(r -> b.equals(r.base())).sorted(BY_RELATIVE).toList();
     }
 
     public List<WorkspaceRecord> loadGroup(String groupSlug) {
-        return query(db(), WorkspaceRecord.TYPEDEF).eq($groupSlug, groupSlug)
-                .orderByAsc($relativePath).list();
+        return Tables.workspaces().all().stream().filter(r -> Objects.equals(groupSlug, r.groupSlug()))
+                .sorted(BY_RELATIVE).toList();
     }
 
     /** When this group was last written by a scan, or 0 when it has never been scanned. */
     public long lastScanned(String groupSlug) {
-        var newest = query(db(), WorkspaceRecord.TYPEDEF).eq($groupSlug, groupSlug)
-                .orderByDesc($lastScanned).limit(1).firstOrNull();
-        return newest == null || newest.lastScanned() == null ? 0L : newest.lastScanned();
+        var newest = 0L;
+        for (var r : Tables.workspaces().all())
+            if (Objects.equals(groupSlug, r.groupSlug()) && r.lastScanned() != null)
+                newest = Math.max(newest, r.lastScanned());
+        return newest;
     }
 
     public WorkspaceRecord byPath(String path) {
-        return query(db(), WorkspaceRecord.TYPEDEF).eq($path, path).firstOrNull();
+        return Tables.workspaces().first(r -> Objects.equals(path, r.path()));
     }
 
     public long count(Path base) {
-        return query(db(), WorkspaceRecord.TYPEDEF).eq($base, abs(base)).count();
+        var b = abs(base);
+        return Tables.workspaces().all().stream().filter(r -> b.equals(r.base())).count();
     }
 
+    /** Puts every record in place (keeping usage counts), then drops this base's rows from older scans. */
     public void replaceAll(Path base, List<WorkspaceRecord> records, long stamp) {
-        var db = db();
-        db.transaction(() -> {
+        var b = abs(base);
+        Tables.workspaces().update(rows -> {
             for (var rec : records) {
                 rec.lastScanned(stamp);
-                rec.in(db).whereEq($path, rec.path()).fields(SCANNED).upsert();
+                var i = indexOf(rows, rec.path());
+                if (i < 0) rows.add(rec);
+                else {
+                    var old = rows.get(i);
+                    rows.set(i, rec.openCount(old.openCount()).lastOpened(old.lastOpened()));
+                }
             }
+            rows.removeIf(r -> b.equals(r.base()) && (r.lastScanned() == null || r.lastScanned() < stamp));
         });
-        deleteStale(base, stamp);
     }
 
-    /** Rows of this base left behind at an older stamp - folders whose PRPs are gone, or renamed. */
-    void deleteStale(Path base, long stamp) {
-        var db = db();
-        var gone = query(db, WorkspaceRecord.TYPEDEF).eq($base, abs(base)).list().stream()
-                .filter(r -> r.lastScanned() == null || r.lastScanned() < stamp)
-                .map(WorkspaceRecord::path).toList();
-        if (gone.isEmpty()) return;
-        db.transaction(() -> gone.forEach(p -> db.select().fromType(WorkspaceRecord.__)
-                .where().property($path.__).eq().value(p)
-                .documents().toList().forEach(db::deleteRecord)));
+    static int indexOf(List<WorkspaceRecord> rows, String path) {
+        for (var i = 0; i < rows.size(); i++) if (Objects.equals(path, rows.get(i).path())) return i;
+        return -1;
     }
 
     /** Records that a folder was actually picked, so heat ordering reflects use and not only mtime. */
     public void recordUsage(String path) {
         try {
-            var db = db();
-            var existing = byPath(path);
-            var count = existing == null ? 0 : existing.openCount();
-            db.transaction(() -> upsert(db, WorkspaceRecord.TYPEDEF)
-                    .key($path, path)
-                    .set($openCount, count + 1)
-                    .set($lastOpened, System.currentTimeMillis())
-                    .save());
+            Tables.workspaces().update(rows -> {
+                var i = indexOf(rows, path);
+                var row = i < 0 ? new WorkspaceRecord().path(path) : rows.get(i);
+                if (i < 0) rows.add(row);
+                row.openCount(row.openCount() + 1).lastOpened(System.currentTimeMillis());
+            });
         } catch (Exception e) {
             System.err.println("[WorkspaceStore] could not record usage for " + path + ": " + e.getMessage());
         }

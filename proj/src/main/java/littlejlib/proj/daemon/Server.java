@@ -2,7 +2,6 @@ package littlejlib.proj.daemon;
 
 import littlejlib.proj.Settings;
 import littlejlib.proj.SettingsManager;
-import littlejlib.proj.db.DB;
 import littlejlib.proj.scanner.ProjectWatcher;
 import littlejlib.proj.ui.JavaFXManager;
 import littlejlib.proj.ui.PickerHost;
@@ -62,8 +61,8 @@ public class Server {
         info.write();
         mark("listening on 127.0.0.1:" + info.port + "  build " + Build.STAMP);
 
-        DB.get();
-        mark("database open");
+        littlejlib.proj.store.Tables.projects().all();
+        mark("index loaded");
         JavaFXManager.getInstance().ensurePlatformInitialized();
         mark("javafx platform initialized");
         // Registering the watcher is now backgrounded - see startWatcher - so this marks only that
@@ -334,7 +333,6 @@ public class Server {
             tray.remove();
             if (serverSocket != null) serverSocket.close();
             Info.clear();
-            DB.get().shutdown();
         } catch (Exception e) {
             log("cleanup: " + e.getMessage());
         }

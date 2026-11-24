@@ -2,27 +2,35 @@ package littlejlib.proj.cct.index;
 
 import module java.base;
 
-import com.arcadedb.database.Database;
+import littlejlib.proj.cct.db.Db;
 import littlejlib.proj.cct.model.*;
 import littlejlib.proj.cct.store.*;
 
-import static datapotter.arcadedbhelper.Query.query;
 import static littlejlib.proj.cct.Num.*;
-import static littlejlib.proj.cct.model.SessionDoc_A.$sessionId;
 
+/**
+ * Indexes one transcript file: its turns go to the session's turn file at once, its SessionDoc into
+ * {@code sessions}, which {@link Indexer} saves after all turns are written. A run that dies between
+ * the two leaves a session with no (or an old) doc, and the next run rebuilds that session from zero.
+ */
 public final class SessionIndexer {
 
-    private final Database db;
+    private final Db db;
+    private final Map<String, SessionDoc> sessions;
     private final IndexOptions opts;
 
-    public SessionIndexer(Database db, IndexOptions opts) { this.db = db; this.opts = opts; }
+    public SessionIndexer(Db db, Map<String, SessionDoc> sessions, IndexOptions opts) {
+        this.db = db;
+        this.sessions = sessions;
+        this.opts = opts;
+    }
 
     public IndexOutcome index(SessionFile f) {
-        var prior = query(db, SessionDoc.TYPEDEF).eq($sessionId, f.sessionId()).firstOrNull();
+        var prior = sessions.get(f.sessionId());
         if (unchanged(f, prior)) return IndexOutcome.UNCHANGED;
         var tail = !opts.force() && prior != null && f.sizeBytes() > n(prior.indexedSize());
         var doc = tail ? prior : blank(f);
-        if (!tail) db.transaction(() -> dropTurns(f.sessionId()));
+        if (!tail) db.turns().drop(f.sessionId());
         return consume(f, doc, tail ? n(doc.indexedOffset()) : 0L, tail);
     }
 
@@ -48,12 +56,12 @@ public final class SessionIndexer {
                     for (var t : TurnFactory.of(rec, f.sessionId(), seq, opts)) human.accept(t);
                 }
                 seq++;
-                if (pending.size() >= opts.batchSize()) flush(pending);
+                if (pending.size() >= opts.batchSize()) flush(f.sessionId(), pending);
             }
             var resolved = human.resolve();
             for (var t : resolved.keep()) { acc.countTurn(t); pending.add(t); }
-            flush(pending);
-            drop(resolved.dropKeys());
+            flush(f.sessionId(), pending);
+            db.turns().dropKeys(f.sessionId(), resolved.dropKeys());
             // Set rather than accumulated: countTurn has been counting the turns that survived this
             // pass, and on a tail pass some previously counted ones have just been deleted.
             doc.humanTurns(resolved.total());
@@ -62,37 +70,19 @@ public final class SessionIndexer {
         } catch (IOException e) {
             return IndexOutcome.FAILED;
         }
-        save(acc.doc());
+        sessions.put(doc.sessionId(), acc.doc());
         return tail ? IndexOutcome.TAILED : IndexOutcome.REBUILT;
     }
 
-    private void flush(List<TurnDoc> pending) {
-        if (pending.isEmpty()) return;
-        db.transaction(() -> { for (var t : pending) t.in(db).insert(); });
+    private void flush(String sessionId, List<TurnDoc> pending) {
+        db.turns().append(sessionId, pending);
         pending.clear();
-    }
-
-    private void save(SessionDoc doc) {
-        db.transaction(() -> doc.in(db).whereEq($sessionId, doc.sessionId()).upsert());
-    }
-
-    private void dropTurns(String sessionId) {
-        db.command("sql", "DELETE FROM " + TurnDoc.__ + " WHERE sessionId = ?", sessionId);
-    }
-
-    private void drop(List<String> turnKeys) {
-        if (turnKeys.isEmpty()) return;
-        db.transaction(() -> {
-            for (var k : turnKeys)
-                db.command("sql", "DELETE FROM " + TurnDoc.__ + " WHERE turnKey = ?", k);
-        });
     }
 
     /** The human turns already indexed for this session, so a tail pass can supersede one. */
     private List<TurnDoc> humanTurnsOf(String sessionId) {
         var out = new ArrayList<TurnDoc>();
-        for (var t : query(db, TurnDoc.TYPEDEF).eq(TurnDoc_A.$sessionId, sessionId)
-                .eq(TurnDoc_A.$layer, littlejlib.proj.cct.store.Layer.HUMAN.depth)) out.add(t);
+        for (var t : db.turns().of(sessionId)) if (n(t.layer()) == Layer.HUMAN.depth) out.add(t);
         return out;
     }
 

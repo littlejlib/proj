@@ -1,8 +1,8 @@
 package littlejlib.proj.cct.model;
 
-import datapotter.arcadedbhelper.*;
+import datapotter.datahelper.Data;
 
-@ArcadeData
+@Data
 public final class ProjectDoc extends ProjectDoc_A {
 
     String encoded;
@@ -17,10 +17,4 @@ public final class ProjectDoc extends ProjectDoc_A {
     Integer memoryFiles;
     Long lastActivity;
 
-    public static final TypeDef<ProjectDoc> TYPEDEF =
-        schemaBuilder()
-            .factory(ProjectDoc::new)
-            .unique($encoded)
-            .lsmIndex($cwdKey)
-            .__();
 }

@@ -1,6 +1,5 @@
 package littlejlib.proj;
 
-import littlejlib.proj.db.DB;
 import littlejlib.proj.scanner.ProjectStore;
 import littlejlib.proj.scanner.ProjectTreeScanner;
 
@@ -43,8 +42,6 @@ public class SmokeScanStore {
         System.out.println("re-running to confirm upsert does not duplicate...");
         store.replaceAll(codeDir, scanner.scan(codeDir), System.currentTimeMillis());
         System.out.println("count after second run=" + store.count(codeDir) + "  (must equal " + records.size() + ")");
-
-        DB.get().shutdown();
         System.out.println("OK");
         System.exit(0);
     }

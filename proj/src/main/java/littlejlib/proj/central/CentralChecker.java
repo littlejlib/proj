@@ -1,7 +1,6 @@
 package littlejlib.proj.central;
 
-import com.arcadedb.database.Database;
-import littlejlib.proj.db.DB;
+import littlejlib.proj.store.Tables;
 import littlejlib.proj.model.CentralArtifact;
 import littlejlib.proj.model.CentralStatus;
 
@@ -19,8 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static littlejlib.proj.model.CentralArtifact_A.$coords;
-import static datapotter.arcadedbhelper.Query.query;
 
 /**
  * Answers "is this on Maven Central" lazily, off the UI thread, and remembers the answer.
@@ -52,7 +49,7 @@ public class CentralChecker {
     /** Loads every previously determined answer into memory. Call once, off the UI thread. */
     public void warmFromCache() {
         try {
-            for (var a : query(db(), CentralArtifact.TYPEDEF).list()) {
+            for (var a : Tables.central().all()) {
                 if (a.isFresh(NEGATIVE_TTL.toMillis())) {
                     memory.put(a.coords(), a.published() ? CentralStatus.PUBLISHED : CentralStatus.ABSENT);
                 }
@@ -115,13 +112,12 @@ public class CentralChecker {
     synchronized void persistAll(Map<String, Boolean> answers) {
         if (answers.isEmpty()) return;
         try {
-            var db = db();
             var now = System.currentTimeMillis();
-            db.transaction(() -> answers.forEach((coords, published) -> new CentralArtifact()
-                    .coords(coords)
-                    .published(published)
-                    .checkedAt(now)
-                    .in(db).whereEq($coords, coords).upsert()));
+            Tables.central().update(rows -> {
+                rows.removeIf(a -> answers.containsKey(a.coords()));
+                answers.forEach((coords, published) ->
+                        rows.add(new CentralArtifact().coords(coords).published(published).checkedAt(now)));
+            });
         } catch (Exception e) {
             System.err.println("[CentralChecker] persist failed for " + answers.size()
                     + " coordinates: " + e.getMessage());
@@ -226,9 +222,5 @@ public class CentralChecker {
 
     public void shutdown() {
         pool.shutdownNow();
-    }
-
-    Database db() {
-        return DB.get().getDatabase();
     }
 }

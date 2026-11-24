@@ -1,7 +1,6 @@
 package littlejlib.proj.prp;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 /**
  * A project's short name - its KEY, in the sense JIRA means it.
@@ -14,18 +13,13 @@ import datapotter.arcadedbhelper.TypeDef;
  * It is stored per project rather than derived because it cannot be derived: {@code billing} appears
  * nowhere in that project's path. Set once, kept; lost with the index, and re-typed in a moment.
  */
-@ArcadeData
+@Data
 public final class ProjectKey extends ProjectKey_A {
 
     String path;            // absolute project root, and the identity of the row
     String key;
     Long updatedAt;
 
-    public static final TypeDef<ProjectKey> TYPEDEF =
-            schemaBuilder()
-                    .factory(ProjectKey::new)
-                    .unique($path)
-                    .__();
 
     @Override
     public String toString() {

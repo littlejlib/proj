@@ -1,7 +1,6 @@
 package littlejlib.proj.model;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 /**
  * One source file, one row. Names and locations only - never contents.
@@ -24,7 +23,7 @@ import datapotter.arcadedbhelper.TypeDef;
  * {@code stem} is the filename without its extension, which for Java and most of its neighbours is
  * the type name - so it is the column a class lookup hits, and it is indexed.
  */
-@ArcadeData
+@Data
 public final class FileRecord extends FileRecord_A {
 
     String path;            // absolute, and the identity of the row
@@ -36,14 +35,6 @@ public final class FileRecord extends FileRecord_A {
     String pkg;             // dotted package, when the layout makes it derivable; else ""
     Long lastModified;
 
-    public static final TypeDef<FileRecord> TYPEDEF =
-            schemaBuilder()
-                    .factory(FileRecord::new)
-                    .unique($path)
-                    .lsmIndex($stem)
-                    .lsmIndex($projectPath)
-                    .lsmIndex($ext)
-                    .__();
 
     /** The fully qualified name, when there is a package to qualify it with. */
     public String fqn() {

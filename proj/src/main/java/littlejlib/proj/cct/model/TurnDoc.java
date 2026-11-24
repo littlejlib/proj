@@ -1,8 +1,8 @@
 package littlejlib.proj.cct.model;
 
-import datapotter.arcadedbhelper.*;
+import datapotter.datahelper.Data;
 
-@ArcadeData
+@Data
 public final class TurnDoc extends TurnDoc_A {
 
     String turnKey;
@@ -21,11 +21,4 @@ public final class TurnDoc extends TurnDoc_A {
     String model;
     String effort;
 
-    public static final TypeDef<TurnDoc> TYPEDEF =
-        schemaBuilder()
-            .factory(TurnDoc::new)
-            .unique($turnKey)
-            .lsmIndex($sessionId)
-            .lsmIndex($layer)
-            .__();
 }

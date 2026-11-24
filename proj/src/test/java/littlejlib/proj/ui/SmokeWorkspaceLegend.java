@@ -33,7 +33,6 @@ public class SmokeWorkspaceLegend {
         // Opened here rather than left to the pane: the scan bar reads its last-scan stamp inline
         // when the store is already open in this process and off-thread when it is not, and only
         // the first of those finishes before a photograph is taken.
-        littlejlib.proj.db.DB.get();
 
         var ready = new CountDownLatch(1);
         Platform.startup(ready::countDown);

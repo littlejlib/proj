@@ -1,7 +1,6 @@
 package littlejlib.proj.model;
 
-import datapotter.arcadedbhelper.ArcadeData;
-import datapotter.arcadedbhelper.TypeDef;
+import datapotter.datahelper.Data;
 
 /**
  * Whether one set of maven coordinates exists on Maven Central.
@@ -10,7 +9,7 @@ import datapotter.arcadedbhelper.TypeDef;
  * it stays valid when a project is moved or renamed, and two checkouts of the same artifact share
  * one lookup. mm declared this column and never wired it up, so it has always rendered empty.
  */
-@ArcadeData
+@Data
 public final class CentralArtifact extends CentralArtifact_A {
 
     String coords;          // groupId:artifactId:version
@@ -18,11 +17,6 @@ public final class CentralArtifact extends CentralArtifact_A {
     Long checkedAt;
     Integer httpStatus;
 
-    public static final TypeDef<CentralArtifact> TYPEDEF =
-            schemaBuilder()
-                    .factory(CentralArtifact::new)
-                    .unique($coords)
-                    .__();
 
     /**
      * A published artifact is immutable on Central, so a positive answer never expires. A negative

@@ -2,27 +2,18 @@ package littlejlib.proj.cct.cli;
 
 import module java.base;
 
-import com.arcadedb.database.DatabaseFactory;
-import com.arcadedb.engine.ComponentFile;
-import com.arcadedb.integration.backup.Backup;
-import com.arcadedb.integration.restore.Restore;
 import picocli.CommandLine.*;
 import littlejlib.proj.cct.db.Db;
 
 /**
- * Consistent backup of the transcript index, through ArcadeDB's own backup rather than a file copy:
- * a copy taken while the engine is running captures the buckets, the mtree and the WAL at different
- * instants and can fail to open.
+ * Backup of the transcript index: a zip of its folder, taken while holding the index lock so no
+ * indexing pass writes during it.
  *
  * <p>Why this index is worth backing up at all, when it looks derived: {@code TurnDoc} stores the
  * message {@code text}, and indexing treats Claude's replies and thinking blocks as opt-OUT
  * ({@code --no-assistant}, {@code --no-thinking}). claude-code prunes transcript .jsonl files off
  * disk over time, so for every session pruned since it was indexed, this index holds the only
  * surviving copy. It is a derived index whose source is being deleted underneath it.
- *
- * <p>It lives here rather than in a script beside the tool because the database is held by whichever
- * proj process owns the server - the daemon or the picker - and an outside process simply cannot
- * open it. Running as a verb means it uses the same handle everything else does.
  *
  * <p>proj_cache is deliberately NOT backed up. That one really is derived, and {@code proj scan}
  * rebuilds it.
@@ -68,12 +59,10 @@ public final class BackupCmd implements Callable<Integer> {
             + (label == null || label.isBlank() ? "" : "-" + label) + ".zip";
         var staging = Files.createTempDirectory("cctranscripts-backup-");
         try {
-            var db = Db.get().db();
-            var before = counts(db);
-            before.forEach((t, n) -> Out.line("  %-14s %,10d", t, n));
-
-            var produced = new Backup(db).setDirectory(staging.toString()).backupDatabase();
-            var zip = resolve(staging, produced);
+            var db = Db.get();
+            var zip = staging.resolve(name);
+            var before = db.indexing(() -> zipDir(db.dir(), zip));
+            Out.line("files         : %,d", before.size());
             Out.line("archive       : %s (%,.1f MB)", zip.getFileName(), Files.size(zip) / 1048576.0);
 
             if (noVerify) Out.line("verify        : SKIPPED - an unverified archive is a belief, not a backup");
@@ -92,43 +81,31 @@ public final class BackupCmd implements Callable<Integer> {
         } finally { deleteTree(staging); }
     }
 
-    static Map<String, Long> counts(com.arcadedb.database.Database db) {
-        var m = new TreeMap<String, Long>();
-        for (var t : db.getSchema().getTypes()) {
-            try (var rs = db.query("sql", "SELECT count(*) AS n FROM `" + t.getName() + "`")) {
-                m.put(t.getName(), rs.hasNext() ? ((Number) rs.next().<Object>getProperty("n")).longValue() : 0L);
+    /** Zips every file under dir; answers relative name to size. */
+    static Map<String, Long> zipDir(Path dir, Path zip) {
+        var sizes = new TreeMap<String, Long>();
+        try (var out = new java.util.zip.ZipOutputStream(Files.newOutputStream(zip)); var s = Files.walk(dir)) {
+            for (var p : s.filter(Files::isRegularFile).filter(p -> !p.getFileName().toString().endsWith(".lock")).toList()) {
+                var rel = dir.relativize(p).toString().replace('\\', '/');
+                out.putNextEntry(new java.util.zip.ZipEntry(rel));
+                sizes.put(rel, Files.copy(p, out));
+                out.closeEntry();
             }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        return m;
+        return sizes;
     }
 
+    /** Reads the archive back and compares every entry's size with what was written. */
     static void verify(Path zip, Map<String, Long> expected) throws Exception {
-        var tmp = Files.createTempDirectory("cctranscripts-verify-");
-        try {
-            var target = tmp.resolve(Db.NAME);
-            new Restore(zip.toAbsolutePath().toString(), target.toString()).setVerboseLevel(0).restoreDatabase();
-            Map<String, Long> actual;
-            try (var f = new DatabaseFactory(target.toString())) {
-                var d = f.open(ComponentFile.MODE.READ_ONLY);
-                try { actual = counts(d); } finally { d.close(); }
-            }
-            var bad = new ArrayList<String>();
-            Out.line("verify        : restored the archive and compared every type");
-            for (var e : expected.entrySet()) {
-                var got = actual.getOrDefault(e.getKey(), 0L);
-                if (!got.equals(e.getValue())) bad.add(e.getKey() + " source " + e.getValue() + " restored " + got);
-                Out.line("  %-14s %,10d  %s", e.getKey(), got, got.equals(e.getValue()) ? "ok" : "MISMATCH");
-            }
-            if (!bad.isEmpty()) throw new IllegalStateException("restore verification FAILED: " + String.join("; ", bad));
-        } finally { deleteTree(tmp); }
-    }
-
-    static Path resolve(Path staging, String produced) {
-        var p = Path.of(produced);
-        if (Files.exists(p)) return p;
-        var q = staging.resolve(p.getFileName());
-        if (Files.exists(q)) return q;
-        throw new IllegalStateException("backup reported " + produced + " but no such file exists");
+        var actual = new TreeMap<String, Long>();
+        try (var in = new java.util.zip.ZipInputStream(Files.newInputStream(zip))) {
+            for (java.util.zip.ZipEntry e; (e = in.getNextEntry()) != null; ) actual.put(e.getName(), in.transferTo(OutputStream.nullOutputStream()));
+        }
+        if (!actual.equals(expected))
+            throw new IllegalStateException("verification FAILED: archive holds " + actual.size() + " files, expected " + expected.size());
+        Out.line("verify        : read the archive back, %,d files match", actual.size());
     }
 
     static List<Path> archives(Path dest) throws IOException {
