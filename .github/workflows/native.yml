@@ -119,7 +119,13 @@ jobs:
           $f = Get-ChildItem target/tmp -Filter 'native-image*.args' | Sort-Object LastWriteTime | Select-Object -Last 1
           $a = @(Get-Content $f.FullName)
           for ($i = 0; $i -lt $a.Count - 1; $i++) {
-            if ($a[$i] -eq '-cp') { $a[$i+1] = (($a[$i+1] -split ';') | Where-Object { $_ -notmatch 'javafx|jfx-static' }) -join ';' }
+            if ($a[$i] -eq '-cp') {
+              # proj's own classes come as the project jar; use the classes folder instead, so one class can be left out below
+              $classes = (Resolve-Path target/classes).Path -replace '\\', '\\'
+              $a[$i+1] = (($a[$i+1] -split ';') | Where-Object { $_ -notmatch 'javafx|jfx-static' } |
+                ForEach-Object { if ($_ -match 'littlejlib-proj-[^\\]*\.jar$') { $classes } else { $_ } }) -join ';'
+              "class path: " + (($a[$i+1] -split ';') | Select-Object -First 2)
+            }
             if ($a[$i] -eq '-o') { $a[$i+1] = $a[$i+1] -replace 'proj$', 'proj-cli' }
           }
           $a | Set-Content target/cli.args
