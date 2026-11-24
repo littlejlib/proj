@@ -110,3 +110,41 @@ jobs:
             proj-upx.exe
             SHA256SUMS
             *build-report*.html
+      - name: CLI-only experiment (the same build with JavaFX off the class path)
+        # Measures what a CLI-only exe would weigh. The UI commands are still compiled in but fail when run
+        # (their JavaFX classes are missing); everything else should work. Never blocks the main build.
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $f = Get-ChildItem target/tmp -Filter 'native-image*.args' | Sort-Object LastWriteTime | Select-Object -Last 1
+          $a = @(Get-Content $f.FullName)
+          for ($i = 0; $i -lt $a.Count - 1; $i++) {
+            if ($a[$i] -eq '-cp') { $a[$i+1] = (($a[$i+1] -split ';') | Where-Object { $_ -notmatch 'javafx|jfx-static' }) -join ';' }
+            if ($a[$i] -eq '-o') { $a[$i+1] = $a[$i+1] -replace 'proj$', 'proj-cli' }
+          }
+          $a | Set-Content target/cli.args
+          native-image '@target/cli.args'
+          if ($LASTEXITCODE -ne 0) { "### CLI-only`nnative-image failed ($LASTEXITCODE)" >> $env:GITHUB_STEP_SUMMARY; exit 1 }
+          $exe = (Resolve-Path target/proj-cli.exe).Path
+          $home2 = Join-Path $env:RUNNER_TEMP 'cli-home'
+          New-Item -ItemType Directory -Force $home2 | Out-Null
+          $sw = [Diagnostics.Stopwatch]::StartNew(); & $exe --version; $ms = $sw.ElapsedMilliseconds
+          $checks = @()
+          foreach ($c in @(@('--version'), @('prp', 'guide'), @('scan'), @('list'), @('prp', 'new', '--help'), @('store', 'where'))) {
+            $out = & $exe "-Duser.home=$home2" @c 2>&1 | Out-String
+            $checks += ('{0}: exit {1}, {2} chars' -f ($c -join ' '), $LASTEXITCODE, $out.Length)
+          }
+          $row = 'proj-cli.exe: {0:N1} MB (full proj.exe {1:N1} MB); --version {2} ms' -f ((Get-Item $exe).Length / 1MB), ((Get-Item target/proj.exe).Length / 1MB), $ms
+          $row; $checks
+          "### CLI-only`n$row`n`n" + ($checks -join "`n`n") >> $env:GITHUB_STEP_SUMMARY
+          Copy-Item $exe ../proj-cli.exe
+          Get-ChildItem target -Filter '*proj-cli*build-report*.html' | Copy-Item -Destination ..
+      - uses: actions/upload-artifact@v5
+        if: always()
+        continue-on-error: true
+        with:
+          name: proj-cli-experiment
+          if-no-files-found: ignore
+          path: |
+            proj-cli.exe
+            *proj-cli*build-report*.html
