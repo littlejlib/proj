@@ -31,10 +31,6 @@ public final class AppPaths {
         return home().resolve("Settings.xml");
     }
 
-    public static Path arcadeDb() {
-        return home().resolve("arcadedb");
-    }
-
     public static Path prpTemplateCache() {
         return home().resolve("prp-template-cache");
     }

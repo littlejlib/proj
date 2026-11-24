@@ -174,9 +174,8 @@ public class Main implements Runnable {
             if (exitCode != null) System.exit(exitCode);
         }
 
-        // Bare "proj" - the main menu - goes the same way, and for a second reason: the picker it
-        // leads to needs ArcadeDB, whose directory lock the daemon holds, so a menu shown here can
-        // offer an option that cannot work. What comes back is either "done", or the name of the
+        // Bare "proj" - the main menu - goes the same way, and for a second reason: the daemon's picker
+        // is already warm. What comes back is either "done", or the name of the
         // one kind of item the daemon cannot carry out - the ones that prompt on this terminal.
         String menuAction = null;
         if (args.length == 0) {
@@ -738,7 +737,7 @@ public class Main implements Runnable {
         public void run() {
             try {
                 if (!noDaemon) {
-                    // The daemon keeps JavaFX and ArcadeDB warm, which is nearly all of the
+                    // The daemon keeps JavaFX and the index warm, which is nearly all of the
                     // startup cost. Null means it could not be reached; fall through rather than
                     // fail, because a picker that opens slowly beats one that does not open.
                     var exitCode = littlejlib.proj.daemon.OpenViaDaemon.open(isVerbose());

@@ -11,7 +11,7 @@ import littlejlib.proj.model.ProjectRecord;
  * <p>
  * Asking here is what makes it lazy for free: a TreeTableView only builds cells for rows near the
  * viewport, so scrolling is the thing that widens the query set. Nothing is looked up for the
- * hundreds of rows nobody has scrolled to, and an answer once obtained is cached in ArcadeDB.
+ * hundreds of rows nobody has scrolled to, and an answer once obtained is cached (cache/central.bin).
  * <p>
  * This is not the whole story any more - a filter that asks "which projects are NOT on Central" is
  * asked of every row at once, including the ones nobody scrolled to, and is served by the whole-set

@@ -17,12 +17,12 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * The resident half: JavaFX warm, ArcadeDB open, the filesystem watcher running, a tray icon.
+ * The resident half: JavaFX warm, the index in memory, the filesystem watcher running, a tray icon.
  * <p>
  * What it does NOT do is touch the caller's terminal. A selection comes back as a path and the
  * client acts on it, because PROJ_POSTRUN_BATCH belongs to the shell that ran the client.
  * <p>
- * Requests are served one at a time. There is one UI and one ArcadeDB, and neither wants two
+ * Requests are served one at a time. There is one UI, and it does not want two
  * callers at once; a request costs milliseconds unless a human is staring at the picker, and in
  * that case queueing is the correct behaviour anyway.
  */
@@ -134,10 +134,9 @@ public class Server {
 
         if (!Build.STAMP.equals(request.stamp)) return Response.stale(Build.STAMP);
 
-        // Index queries are served here because the daemon holds ArcadeDB's exclusive directory
-        // lock. A CLI process cannot open the same database while this one is alive, so the query
-        // comes to the data rather than the other way round - and it must not queue behind an open
-        // window, which is why this is outside the window lock. See queryLock.
+        // Index queries are still served here for a client that asks (the CLI now reads the index files
+        // itself, PRP 001V). They must not queue behind an open window, so this is outside the window
+        // lock. See queryLock.
         if ("query".equals(verb)) {
             synchronized (queryLock) {
                 return query(request.args.subList(1, request.args.size()));
