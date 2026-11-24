@@ -188,7 +188,16 @@ public class Main implements Runnable {
 
         {
             settingsManager = new SettingsManager();
+            var existed = java.nio.file.Files.exists(settingsManager.getSettingsFilePath());
             settings = settingsManager.loadSettings();
+
+            // First run with a command (an agent's `proj prp guide` right after install): use the template just
+            // written and say so on stderr. Bare `proj` still shows the setup screen; a broken file still stops.
+            if (settings == null && !existed && args.length > 0) {
+                settings = settingsManager.loadSettings();
+                if (settings != null) System.err.println("[proj] first run: wrote " + settingsManager.getSettingsFilePath()
+                        + " - edit it to set your code folders");
+            }
 
             // Handle first run setup
             if (settings == null) {

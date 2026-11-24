@@ -53,9 +53,31 @@ public final class SelfCli {
     public static class UninstallCmd implements Runnable {
         @Override public void run() {
             stopDaemon();
-            var r = Install.uninstall("proj");
-            r.problems().forEach(p -> System.err.println("proj: " + p));
-            if (!r.ok()) System.exit(1);
+            var self = Native.image() ? Native.exe() : null;
+            var r = Install.uninstall("proj", m -> { if (!isOwnAside(m, self)) System.out.println(m); });
+            var problems = r.problems().stream().filter(p -> !isOwnAside(p, self)).toList();
+            problems.forEach(p -> System.err.println("proj: " + p));
+            if (self != null) deleteAfterExit(self);
+            if (!problems.isEmpty()) System.exit(1);
+        }
+    }
+
+    // Workaround for PRP jarrunner-001V: jr-apputils renames the running exe aside, then tries to delete that
+    // same running file. Delete it once this process has exited instead. Remove when jr-apputils does this.
+    static boolean isOwnAside(String message, java.nio.file.Path self) {
+        return self != null && message.contains(self.getFileName() + ".jr-replaced");
+    }
+
+    /** A detached cmd waits for this process to end, then removes the exe, its set-aside copy and an empty folder. */
+    static void deleteAfterExit(java.nio.file.Path exe) {
+        try {
+            var aside = exe.resolveSibling(exe.getFileName() + ".jr-replaced");
+            var script = "ping -n 3 127.0.0.1 >nul & del /f /q \"" + exe + "\" \"" + aside + "\" 2>nul & rmdir \""
+                    + exe.getParent() + "\" 2>nul";
+            new ProcessBuilder("cmd", "/c", script).redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        } catch (Exception e) {
+            System.err.println("proj: could not schedule removal of " + exe + ": " + e.getMessage());
         }
     }
 }

@@ -77,6 +77,9 @@ jobs:
           call "%GITHUB_WORKSPACE%\proj\target\proj.exe" install < nul || exit /b 1
           "%LOCALAPPDATA%\Programs\proj\proj.exe" prp guide || exit /b 1
           "%LOCALAPPDATA%\Programs\proj\proj.exe" uninstall < nul || exit /b 1
+          rem the running exe removes itself a moment after it exits
+          ping -n 8 127.0.0.1 >nul
+          if exist "%LOCALAPPDATA%\Programs\proj" (dir "%LOCALAPPDATA%\Programs\proj" & exit /b 1)
       - name: UPX-packed variant
         # UPX shrinks the file but unpacks the whole exe into memory on every start, and unsigned packed exes are
         # a favourite of antivirus heuristics: measured here, not assumed. Continues on failure: it is a comparison.
