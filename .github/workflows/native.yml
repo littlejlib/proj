@@ -123,7 +123,7 @@ jobs:
             if ($a[$i] -eq '-o') { $a[$i+1] = $a[$i+1] -replace 'proj$', 'proj-cli' }
           }
           $a | Set-Content target/cli.args
-          native-image '@target/cli.args'
+          native-image '@target/cli.args' littlejlib.proj.Main
           if ($LASTEXITCODE -ne 0) { "### CLI-only`nnative-image failed ($LASTEXITCODE)" >> $env:GITHUB_STEP_SUMMARY; exit 1 }
           $exe = (Resolve-Path target/proj-cli.exe).Path
           $home2 = Join-Path $env:RUNNER_TEMP 'cli-home'
