@@ -40,7 +40,8 @@ public final class QueryCommands {
 
     private QueryCommands() { }
 
-    public static int run(List<String> args, PrintWriter out, PrintWriter err) {
+    /** The query commands as one picocli tree, wired for help and errors. */
+    public static CommandLine tree(PrintWriter out, PrintWriter err) {
         var root = new CommandLine(new Root());
         root.addSubcommand("list", new ListCmd(out));
         root.addSubcommand("find", new FindCmd(out));
@@ -55,8 +56,12 @@ public final class QueryCommands {
         root.addSubcommand("ws", new WsCli());
         root.addSubcommand("prp-session", new PrpSessionCmd(out, err));
         root.addSubcommand("cct", new littlejlib.proj.cct.cli.CctCli());
-        root.setOut(out);
-        root.setErr(err);
+        CliWiring.wire(root, out, err);
+        return root;
+    }
+
+    public static int run(List<String> args, PrintWriter out, PrintWriter err) {
+        var root = tree(out, err);
         littlejlib.proj.cct.cli.Out.redirect(out, err);
         root.setUnmatchedArgumentsAllowed(false);
         // picocli's default handler prints a stack trace, which is never the useful answer here -

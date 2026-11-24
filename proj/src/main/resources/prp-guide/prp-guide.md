@@ -33,6 +33,8 @@ A PRP (Project Requirement Prompt) is one requirement of a project. Its files ar
 - Work items of the project: `proj prp plan add "<title>" -t todo|discuss|confirm -p <number>`, `proj prp plan list`, `proj prp plan set <id> -s done`.
   - Importance: `--tag critical|infra|extra`. Waits for: `--after 3,billing#5` (an id here, or `Project#id` in another project); `--blocks billing#7` makes that item wait for this one.
   - Never run together: `--uses git:billing-core` (a shared resource: a repository, a document, an account; `account:free*2` lets two at once).
+  - More on an item: `--detail "<one to three sentences>"` and `--ref <file, commit or url>` (repeatable); `plan set` replaces both.
+  - Every command explains its own options: `proj prp plan add --help`.
   - Starting an item: `proj prp plan set <id> -s doing` FIRST, before working on it. If proj refuses because a live item holds a resource, stop and report; do not use `--force`. Set `done` (or `open`) when you stop.
   - The plan of several projects as one graph: `proj prp plan report --with billing,ledger --goal billing:31 --format md`; for filtering, `--format json --jq '<program>'` (no separate jq needed). The user reads and answers it at `http://127.0.0.1:8688/report?with=...`; his answers arrive as items set done with `reply` and source `user ... (web)`, and as decision notes on the PRP.
 - Other PRPs: `proj prp find <words | ticket | uuid>`, `proj prp status <number>`.

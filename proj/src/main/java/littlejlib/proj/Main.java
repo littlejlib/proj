@@ -128,7 +128,7 @@ public class Main implements Runnable {
         // install, update and uninstall put the exe itself in place; they need no settings, and on a profile that has
         // never run proj the first-run prompt below would stop them.
         if (args.length > 0 && java.util.Set.of("install", "update", "uninstall").contains(args[0])) {
-            System.exit(new CommandLine(new Main()).execute(args));
+            System.exit(littlejlib.proj.cli.CliWiring.wire(new CommandLine(new Main())).execute(args));
         }
 
         // The adapter passes --print-cd, which tells Navigate that something is reading
@@ -218,8 +218,7 @@ public class Main implements Runnable {
             } else {
                 // CLI mode - use Picocli to parse and execute command
                 Main mainCmd = new Main();
-                CommandLine cmd = new CommandLine(mainCmd);
-                cmd.setOut(new java.io.PrintWriter(StdoutChannel.data(), true));
+                CommandLine cmd = littlejlib.proj.cli.CliWiring.wire(new CommandLine(mainCmd));
                 if (LaunchMode.stdoutCaptured()) {
                     cmd.setColorScheme(CommandLine.Help.defaultColorScheme(CommandLine.Help.Ansi.OFF));
                 }
