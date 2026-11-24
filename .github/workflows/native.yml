@@ -123,7 +123,10 @@ jobs:
             if ($a[$i] -eq '-o') { $a[$i+1] = $a[$i+1] -replace 'proj$', 'proj-cli' }
           }
           $a | Set-Content target/cli.args
+          # the native-only substitute for exe icons names a JavaFX type; the CLI build has no icons to read
+          Remove-Item target/classes/littlejlib/proj/nativeimage/Target_ExeIcon*.class -ErrorAction SilentlyContinue
           native-image '@target/cli.args' littlejlib.proj.Main
+          if ( -ne 0) { Get-ChildItem target -Filter 'svm_err_*.md' | Select-Object -Last 1 | Get-Content -TotalCount 60 }
           if ($LASTEXITCODE -ne 0) { "### CLI-only`nnative-image failed ($LASTEXITCODE)" >> $env:GITHUB_STEP_SUMMARY; exit 1 }
           $exe = (Resolve-Path target/proj-cli.exe).Path
           $home2 = Join-Path $env:RUNNER_TEMP 'cli-home'
