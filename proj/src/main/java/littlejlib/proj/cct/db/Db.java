@@ -39,15 +39,15 @@ public final class Db implements Closeable {
     }
 
     public Table<SessionDoc> sessions() {
-        return Table.of(dir.resolve("sessions.json"), SessionDoc.class);
+        return Table.of(dir.resolve("sessions.bin"), SessionDoc.class);
     }
 
     public Table<ProjectDoc> projects() {
-        return Table.of(dir.resolve("projects.json"), ProjectDoc.class);
+        return Table.of(dir.resolve("projects.bin"), ProjectDoc.class);
     }
 
     public Table<HistoryDoc> history() {
-        return Table.of(dir.resolve("history.json"), HistoryDoc.class);
+        return Table.of(dir.resolve("history.bin"), HistoryDoc.class);
     }
 
     public Path dir() {

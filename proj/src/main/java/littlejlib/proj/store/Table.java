@@ -22,7 +22,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * One JSON file of rows, held in memory. Reads never lock: they reload when the file changed on disk.
+ * One file of rows (JSON, or {@link BinCodec} for a .bin file), held in memory. Reads never lock: they reload when the file changed on disk.
  * A write locks {@code <file>.lock} (across processes), re-reads the file, applies the change and
  * renames a temp file over it, so the daemon and a CLI can both write without losing each other's rows.
  * Rows handed out are shared: change them only inside {@link #write}.
@@ -33,6 +33,7 @@ public final class Table<T> {
 
     private final Path file;
     private final Type listType;
+    private final BinCodec<T> bin;
     private boolean held = true;
     private List<T> rows = List.of();
     private FileTime seenTime;
@@ -41,6 +42,7 @@ public final class Table<T> {
     private Table(Path file, Class<T> type) {
         this.file = file;
         this.listType = TypeToken.getParameterized(List.class, type).getType();
+        this.bin = file.getFileName().toString().endsWith(".bin") ? new BinCodec<>(type) : null;
     }
 
     /** One instance per file in this process, so the in-process lock and the cache are shared. */
@@ -157,6 +159,17 @@ public final class Table<T> {
     }
 
     private List<T> read(boolean lenient) throws IOException {
+        if (bin != null) {
+            try (var in = Files.newInputStream(file)) {
+                return bin.read(in);
+            } catch (NoSuchFileException e) {
+                return List.of();
+            } catch (IOException | RuntimeException e) {
+                if (!lenient) throw new IOException("unreadable " + file + " (not overwritten): " + e.getMessage(), e);
+                System.err.println("[store] ignoring unreadable " + file + ": " + e.getMessage());
+                return List.of();
+            }
+        }
         try (var r = Files.newBufferedReader(file)) {
             List<T> list = Json.GSON.fromJson(r, listType);
             if (list == null) return List.of();
@@ -174,8 +187,14 @@ public final class Table<T> {
 
     private void save(List<T> list) throws IOException {
         var tmp = file.resolveSibling(file.getFileName() + ".tmp");
-        try (var w = Files.newBufferedWriter(tmp)) {
-            Json.GSON.toJson(list, listType, w);
+        if (bin != null) {
+            try (var out = Files.newOutputStream(tmp)) {
+                bin.write(list, out);
+            }
+        } else {
+            try (var w = Files.newBufferedWriter(tmp)) {
+                Json.GSON.toJson(list, listType, w);
+            }
         }
         Json.replace(tmp, file);
     }

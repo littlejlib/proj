@@ -28,23 +28,23 @@ public final class Tables {
     }
 
     public static Table<ProjectRecord> projects() {
-        return Table.of(cache().resolve("projects.json"), ProjectRecord.class);
+        return Table.of(cache().resolve("projects.bin"), ProjectRecord.class);
     }
 
     public static Table<ProjectDependency> dependencies() {
-        return Table.of(cache().resolve("dependencies.json"), ProjectDependency.class);
+        return Table.of(cache().resolve("dependencies.bin"), ProjectDependency.class);
     }
 
     public static Table<FileRecord> files() {
-        return Table.of(cache().resolve("files.json"), FileRecord.class).unheld();
+        return Table.of(cache().resolve("files.bin"), FileRecord.class).unheld();
     }
 
     public static Table<CentralArtifact> central() {
-        return Table.of(cache().resolve("central.json"), CentralArtifact.class);
+        return Table.of(cache().resolve("central.bin"), CentralArtifact.class);
     }
 
     public static Table<WorkspaceRecord> workspaces() {
-        return Table.of(cache().resolve("workspaces.json"), WorkspaceRecord.class);
+        return Table.of(cache().resolve("workspaces.bin"), WorkspaceRecord.class);
     }
 
     public static Table<PrpSession> prpSessions() {
