@@ -11,11 +11,16 @@ import java.util.List;
 import java.util.jar.JarFile;
 
 /**
- * Registers every class of proj itself for reflection (constructors, fields, methods). Gson and Jackson read and write
- * proj's own classes by reflection in 26 places, and a class missing here does not fail: gson writes {} for it.
+ * Registers every class of proj itself for reflection: constructors and fields for all (Gson and the binary store read
+ * and write fields; a class missing here does not fail, gson writes {} for it), methods only where something calls
+ * them reflectively: records (Gson reads them through their accessors) and the classes Jackson binds as beans.
+ * Registering every method of every class kept all of proj's code reachable, UI included.
  */
 public final class ProjReflectionFeature implements Feature {
     static final String ROOT = "littlejlib/proj/";
+
+    /** Bound by Jackson through getters and setters (with their nested types). */
+    static final List<String> BEANS = List.of("littlejlib.proj.ai.AiConfig", "littlejlib.proj.cct.Settings");
 
     @Override
     public void beforeAnalysis(BeforeAnalysisAccess access) {
@@ -26,7 +31,10 @@ public final class ProjReflectionFeature implements Feature {
                 RuntimeReflection.register(c);
                 RuntimeReflection.register(c.getDeclaredConstructors());
                 RuntimeReflection.register(c.getDeclaredFields());
-                RuntimeReflection.register(c.getDeclaredMethods());
+                if (c.isRecord() || BEANS.stream().anyMatch(b -> name.equals(b) || name.startsWith(b + "$")))
+                    RuntimeReflection.register(c.getDeclaredMethods());
+                else
+                    RuntimeReflection.registerAllDeclaredMethods(c); // listable, not reachable
             } catch (Throwable ignored) {
             }
         }
